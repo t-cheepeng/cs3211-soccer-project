@@ -1,0 +1,43 @@
+﻿var field[4] = [0,0,0,0];
+
+var ballPos:{0..3} = 1; // team 1 always starts first.
+var team0playerPos[2] = [0, 1];
+var team1playerPos[2] = [2, 3];
+hvar teamScore[2] = [0,0];
+var team0Score = 0;
+var team1Score = 0;
+hvar time = 5;
+hvar hasBall = -1;
+#define canDribble ballPos>0 && ballPos <3;
+
+GoalKeep0 = [hasBall == -1 && ballPos == team0playerPos[0] && time > 0] acquire{hasBall=0} -> pass{ballPos = 1; time--;} -> GoalKeep0 [] [time == 0] Skip;
+Player0 = [ballPos == team0playerPos[1] && time > 0] (shootOutcome0 [] [canDribble]dribble0) [] [time == 0] Skip;
+Player1 = [ballPos == team1playerPos[1] && time > 0] shootOutcome1 [] [time == 0] Skip;
+GoalKeep1 = [ballPos == team1playerPos[0] && time > 0] pass{ballPos = 2; time--;} -> GoalKeep1 [] [time == 0] Skip;
+
+shootOutcome0 = pcase {
+	1: goal{team0Score = team0Score + 1; ballPos = 2; time--;} -> Player0
+	1: miss{ballPos = 3; time--;} -> Player0 // TODO: make random choice for ballPos
+};
+
+shootOutcome1 = pcase {
+	1: goal{team1Score = team1Score + 1; ballPos = 1; time--;} -> Player1
+	1: miss{ballPos = 0; time--;} -> Player1 // TODO: make random choice for ballPos
+};
+
+dribble0 = pcase {
+	1: dribbleSuccess{team0playerPos[1]++; ballPos++; time--;} -> Player0
+//	1: fail{team0playerPos[1]++; time--;} -> Player0
+};
+
+PlayGame = Player1 || Player0 || GoalKeep1 || GoalKeep0;
+
+#define timeIsZero time == 0;
+#define team0Win team0Score > team1Score && timeIsZero;
+#define team1Win team0Score < team1Score && timeIsZero;
+#define draw team0Score == team1Score && timeIsZero;
+
+#assert PlayGame reaches timeIsZero with prob;
+#assert PlayGame reaches draw with prob;
+#assert PlayGame reaches team1Win with prob;
+#assert PlayGame reaches team0Win with prob;
