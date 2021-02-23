@@ -1,0 +1,96 @@
+﻿// Model
+// =============================
+// |             |             |             
+// |      0      |      1      |
+// |             |             |
+// =============================
+// Instead of modelling players, we model zones on the field
+// Each zone can have any number of players from either team
+// Two Players only
+// No goalkeeper
+// Shoot and Dribble Completed
+// At each timestep (by time hidden variable), only one zone will take action
+// The process always goes from Zone# -> Zone#Actions -> Zone#Team#Actions -> Loop Back
+// Zone#: Guard against zones with no players and time over
+// Zone#Actions: Choose what team gets to take actions in the zone#
+// Zone#Team#Actions: Team# actual actions in Zone#
+// Loop Back: Choose which Zone# gets to be active
+
+#define timeOver time == 0;
+// This should change once we allow running when players don't have the ball
+#define canTeam0Act teamInPossessionOfBall == 0;
+#define canTeam1Act teamInPossessionOfBall == 1;
+
+#define doesTeam0HaveBallInZone0 canTeam0Act && ballInZone == 0; 
+#define doesTeam0HavePlayersInZone0 numOfTeam0PlayersInZone[0] > 0;
+#define doesTeam0HaveBallInZone1 canTeam0Act && ballInZone == 1;
+#define doesTeam0HavePlayersInZone1 numOfTeam0PlayersInZone[1] > 0;
+
+#define doesTeam1HaveBallInZone0 canTeam1Act && ballInZone == 0; 
+#define doesTeam1HavePlayersInZone0 numOfTeam1PlayersInZone[0] > 0;
+#define doesTeam1HaveBallInZone1 canTeam1Act && ballInZone == 1;
+#define doesTeam1HavePlayersInZone1 numOfTeam1PlayersInZone[1] > 0;
+
+// Some player must be in a zone and time not over in order for the zone to be active
+#define canZone0Act numOfTeam0PlayersInZone[0] + numOfTeam1PlayersInZone[0] > 0 && !timeOver;
+#define canZone1Act numOfTeam0PlayersInZone[1] + numOfTeam1PlayersInZone[1] > 0 && !timeOver;
+
+var teamInPossessionOfBall:{0..1} = 0;
+var ballInZone:{0..1} = 0;
+var numOfTeam0PlayersInZone[2] = [1,0];
+var numOfTeam1PlayersInZone[2] = [0,1];
+var team0Score = 0;
+var team1Score = 0;
+hvar time = 4;
+
+
+
+// ========== Zone 0 ========== //
+Zone0 = [canZone0Act] Zone0Actions [] [timeOver] Skip [] Skip;
+Zone0Actions = Zone0Team0Actions [] Zone0Team1Actions;
+
+Zone0Team0Actions = 
+	[doesTeam0HaveBallInZone0 && doesTeam0HavePlayersInZone0] pcase {
+	1: zone0team0shoot{team0Score++; teamInPossessionOfBall=1; ballInZone=1;} -> TickTock
+	1: zone0team0dribble{ballInZone=1; numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock
+	}
+	[] [doesTeam0HavePlayersInZone0] zone0team0run{numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock 
+	[] Skip;
+
+Zone0Team1Actions = [doesTeam1HaveBallInZone0 && doesTeam1HavePlayersInZone0] pcase {
+ 	1: zone0team1shoot{team1Score++; teamInPossessionOfBall=0; ballInZone=0; numOfTeam1PlayersInZone[0]--; numOfTeam1PlayersInZone[1]++;} -> TickTock
+} [] Skip;
+
+
+
+// ========== Zone 1 ========== //
+Zone1 =  [canZone1Act] Zone1Actions [] [timeOver] Skip [] Skip;
+Zone1Actions = Zone1Team0Actions [] Zone1Team1Actions;
+
+Zone1Team0Actions = [doesTeam0HaveBallInZone1 && doesTeam0HavePlayersInZone1] pcase {
+	1: zone1team0shoot{team0Score++; teamInPossessionOfBall=1; ballInZone=1; numOfTeam0PlayersInZone[1]--; numOfTeam0PlayersInZone[0]++;} -> TickTock
+} [] Skip;
+
+Zone1Team1Actions = [doesTeam1HaveBallInZone1 && doesTeam1HavePlayersInZone1] pcase {
+	1: zone1team1shoot{team1Score++; teamInPossessionOfBall=0; ballInZone=0;} -> TickTock [] Skip
+	1: zone1team1dribble{ballInZone=0; numOfTeam1PlayersInZone[0]++; numOfTeam1PlayersInZone[1]--;} -> TickTock
+} [] Skip;
+
+
+
+// ========== Soccer Match ========== //
+// Starting kickoff can be either team
+Whokickoff = []i:{0..1}@TossCoin{teamInPossessionOfBall = i; ballInZone=i;} -> Skip;
+PlayGame = Whokickoff; (TickTock);
+TickTock = timed{time--} -> (Zone0 [] Zone1);
+
+
+
+// ========== Verifications ========== //
+#define team0Win team0Score > team1Score && timeOver;
+#define team1Win team0Score < team1Score && timeOver;
+#define draw team0Score == team1Score && timeOver;
+
+#assert PlayGame reaches team0Win with prob;
+#assert PlayGame reaches team1Win with prob;
+#assert PlayGame reaches draw with prob;
