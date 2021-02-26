@@ -1,43 +1,211 @@
-﻿var field[4] = [0,0,0,0];
+﻿#import "PAT.Lib.HashTable";
 
-var ballPos:{0..3} = 1; // team 1 always starts first.
-var team0playerPos[2] = [0, 1];
-var team1playerPos[2] = [2, 3];
-hvar teamScore[2] = [0,0];
+//var field[4] = [0,0,0,0];
+hvar<HashTable> playerLocations;
+
+/*
+Player Definitions:
+  Team0 Goalkeeper = Player 0
+  Team0 Striker = Player 1
+  Team1 Goalkeeper = Player 2
+  Team1 Striker = Player 3
+*/
+
+
+/*
+Indicates who has the ball. 
+  ie. hasBall = 0 means Player 0 has the ball
+  ie. hasBall = -1 means nobody has the ball.
+*/  
+hvar hasBall:{-1..3} = -1;
+var ballPos:{0..3} = 0; 
+
+hvar team0playerPos[2] = [0, 1];
+hvar team1playerPos[2] = [2, 3];
+var teamsPos[2][2] = [0, 1,
+					 2, 3];
+
 var team0Score = 0;
 var team1Score = 0;
-hvar time = 5;
-hvar hasBall = -1;
-#define canDribble ballPos>0 && ballPos <3;
 
-GoalKeep0 = [hasBall == -1 && ballPos == team0playerPos[0] && time > 0] acquire{hasBall=0} -> pass{ballPos = 1; time--;} -> GoalKeep0 [] [time == 0] Skip;
-Player0 = [ballPos == team0playerPos[1] && time > 0] (shootOutcome0 [] [canDribble]dribble0) [] [time == 0] Skip;
-Player1 = [ballPos == team1playerPos[1] && time > 0] shootOutcome1 [] [time == 0] Skip;
-GoalKeep1 = [ballPos == team1playerPos[0] && time > 0] pass{ballPos = 2; time--;} -> GoalKeep1 [] [time == 0] Skip;
+var turnOver[4] = [0, 0, 0, 0];
 
+hvar time = 4;
+
+#define gameNotOver time > 0;
+#define gameIsOver time == 0;
+
+#define ballAtGoalie0 ballPos == teamsPos[0][0];
+#define ballAtGoalie1 ballPos == teamsPos[1][1];
+#define ballAtStriker0 ballPos == teamsPos[0][1];
+#define ballAtStriker1 ballPos == teamsPos[1][0];
+
+#define goalie0HasBall hasBall == 0;
+#define goalie1HasBall hasBall == 3;
+#define striker0HasBall hasBall == 1;
+#define striker1HasBall hasBall == 2;
+#define nobodyHasBall hasBall == -1;
+
+#define turnIsOver (turnOver[0] == 1 && turnOver[1] == 1 && turnOver[2] == 1 && turnOver[3] == 1);
+
+#define canDribble ballPos >= 1 && ballPos <= 2;
+
+/*
+GoalKeep0 = [ballAtGoalie0 && gameNotOver] acquire{hasBall=0; time--} -> pass{ballPos = 1; time--;} -> GoalKeep0
+ [] [gameIsOver] Skip;
+ 
+Striker0 = 
+ [ballAtStriker0 && gameNotOver] 
+ 	(shootOutcome0 
+ 	 [] [canDribble] dribble0)
+ [] [gameIsOver] Skip;
+ 
+Striker1 = [ballAtStriker1 && gameNotOver] shootOutcome1
+ [] [gameIsOver] Skip;
+ 
+GoalKeep1 = [ballPos == team1playerPos[0] && gameNotOver] pass{ballPos = 2; time--;} -> GoalKeep1
+ [] [gameIsOver] Skip;
+ 
+*/
+ResetTurns = atomic{resetTurns{
+	var x = 0;
+	while (x <= 3) {
+		turnOver[x] = 0;
+		x++;
+	}
+} -> Timer};
+Timer = [gameIsOver] Skip [] [turnIsOver && gameNotOver] tick{time--;} -> ResetTurns;
+
+/*
 shootOutcome0 = pcase {
-	1: goal{team0Score = team0Score + 1; ballPos = 2; time--;} -> Player0
-	1: miss{ballPos = 3; time--;} -> Player0 // TODO: make random choice for ballPos
+	1: goal{team0Score = team0Score + 1; ballPos = 2; time--;} -> Striker0
+	1: miss{ballPos = 3; time--;} -> Striker0 // TODO: make random choice for ballPos
 };
 
 shootOutcome1 = pcase {
-	1: goal{team1Score = team1Score + 1; ballPos = 1; time--;} -> Player1
-	1: miss{ballPos = 0; time--;} -> Player1 // TODO: make random choice for ballPos
+	1: goal{team1Score = team1Score + 1; ballPos = 1; time--;} -> Striker1
+	1: miss{ballPos = 0; time--;} -> Striker1 // TODO: make random choice for ballPos
 };
 
 dribble0 = pcase {
-	1: dribbleSuccess{team0playerPos[1]++; ballPos++; time--;} -> Player0
-//	1: fail{team0playerPos[1]++; time--;} -> Player0
+	1: dribbleSuccess{team0playerPos[1]++; ballPos++; time--;} -> Striker0
+//	1: fail{team0playerPos[1]++; time--;} -> Striker0
+};
+*/
+EndTurn(i) = turnEnd.i{turnOver[i] = 1;} -> Skip;
+
+AcquireBall(i) = atomic{
+	acquire.i{if(nobodyHasBall) {hasBall = i}} -> Skip
 };
 
-PlayGame = Player1 || Player0 || GoalKeep1 || GoalKeep0;
+Dribble(i) = pcase {
+	1: dribbleSuccess.i{
+		if(i == 1) {
+			teamsPos[0][1] = 2;
+		}
+		else {
+			teamsPos[1][0] = 1;
+		}
+	} -> Skip
+	1: dribbleFail.i{hasBall = -1} -> Skip
+};
 
-#define timeIsZero time == 0;
-#define team0Win team0Score > team1Score && timeIsZero;
-#define team1Win team0Score < team1Score && timeIsZero;
-#define draw team0Score == team1Score && timeIsZero;
+Shoot(i) = pcase {
+	1: atomic{shootGoal.i{
+		if(i == 1) { // Team0 Striker score
+			team0Score++;
+			ballPos = 2;
+			hasBall = 2;
+		} else { // Team1 Striker
+			team1Score++;
+			ballPos = 1;
+			hasBall = 1;
+		}
+		teamsPos[0][1] = 1;
+		teamsPos[1][0] = 2;
+		// TODO: Fix Problem here - when shoot succeeds, need to reset all the processes and turns.
+	} -> Skip}
+	1: shootMiss.i{
+		if(i == 1) { // Team0 Striker miss
+			ballPos = 3;
+			hasBall = 3;
+		} else { // Team1 Striker miss
+			ballPos = 0;
+			hasBall = 0;		
+		}
+	} -> Skip
+};
 
-#assert PlayGame reaches timeIsZero with prob;
+StrikerMove(i) = StrikerMovePos.i{
+	if (i == 1) { // Team0 Striker
+		if (teamsPos[0][1] == 1) {teamsPos[0][1] = 2;}
+		else {teamsPos[0][1] = 1}
+	} else { // Team1 Striker
+		if (teamsPos[1][0] == 2) {teamsPos[1][0] = 1;}
+		else {teamsPos[1][0] = 2}
+	}
+} -> Skip;
+
+Striker0Actions = 
+	[ballAtStriker0 && striker0HasBall] pcase {
+	1: Dribble(1); EndTurn(1)
+	1: Shoot(1); EndTurn(1)
+	}
+	[] [!ballAtStriker0 && !striker0HasBall] pcase {
+		1: EndTurn(1)
+		1: StrikerMove(1); EndTurn(1)
+	}
+	[] [ballAtStriker0 && !striker0HasBall] pcase{
+		1: AcquireBall(1); EndTurn(1)
+	};
+	
+Striker1Actions = 
+	[ballAtStriker1 && striker1HasBall] pcase {
+	1: Dribble(2); EndTurn(2)
+	1: Shoot(2); EndTurn(2)
+	}
+	[] [!ballAtStriker1 && !striker1HasBall] pcase {
+		1: EndTurn(2)
+		1: StrikerMove(2); EndTurn(2)
+	}
+	[] [ballAtStriker1 && !striker1HasBall] pcase{
+		1: AcquireBall(2); EndTurn(2)
+	};
+
+
+
+Goalie0Actions = [ballAtGoalie0 && goalie0HasBall] goalie0Pass{hasBall = -1; ballPos = 1;} -> EndTurn(0) [] [!ballAtGoalie0 && !goalie0HasBall] EndTurn(0);
+
+Goalie1Actions = [ballAtGoalie1 && goalie1HasBall] goalie1Pass{hasBall = -1; ballPos = 2;} -> EndTurn(3) [] [!ballAtGoalie1 && !goalie1HasBall] EndTurn(3);
+
+KickOff = pcase {
+	1: team0kickoff{ballPos = 1; hasBall = 1;} -> Skip
+	1: team1kickoff{ballPos = 2; hasBall = 2;} -> Skip
+};
+
+
+GoalKeep0 = [turnOver[0] == 0 && gameNotOver] (Goalie0Actions; GoalKeep0)
+ [] [gameIsOver] Skip;
+ 
+Striker0 = [turnOver[1] == 0 && gameNotOver] (Striker0Actions; Striker0)
+ [] [gameIsOver] Skip;
+ 
+Striker1 = [turnOver[2] == 0 && gameNotOver] (Striker1Actions; Striker1)
+ [] [gameIsOver] Skip;
+ 
+GoalKeep1 = [turnOver[3] == 0 && gameNotOver] (Goalie1Actions; GoalKeep1)
+ [] [gameIsOver] Skip;
+ 
+
+
+PlayGame = KickOff; (Striker1 || Striker0 || GoalKeep1 || GoalKeep0 || Timer);
+
+
+#define team0Win team0Score > team1Score && gameIsOver;
+#define team1Win team0Score < team1Score && gameIsOver;
+#define draw team0Score == team1Score && gameIsOver;
+
+#assert PlayGame reaches gameIsOver;
 #assert PlayGame reaches draw with prob;
 #assert PlayGame reaches team1Win with prob;
 #assert PlayGame reaches team0Win with prob;
