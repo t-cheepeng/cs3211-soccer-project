@@ -1,4 +1,11 @@
-﻿// Model
+﻿// TODO List (In order of priority, Highest -> Lowest):
+// 1. Have some C# Helper class to check all the defined things. ABSTRACTION
+// 2. Model failures of shoot, dribble, run and pass
+// 3. Model backward actions 
+// 4. Assign probabilities to success/failure. Probably do this with a C# Helper class again
+// 5. Expand to larger number of zones and larger number of players
+
+// Model
 // =============================
 // |             |             |             
 // |      0      |      1      |
@@ -8,7 +15,8 @@
 // Each zone can have any number of players from either team
 // Two Players only
 // No goalkeeper
-// Shoot and Dribble and Run Completed
+// Players are not allowed to perform actions backwards(ie. all actions move in one direction, from 0 -> 1 or 1 -> 0) for now
+// Successful Shoot and Dribble and Run and Pass completed
 // At each timestep (by time hidden variable), only one zone will take action
 // The process always goes from Zone# -> Zone#Actions -> Zone#Team#Actions -> Loop Back
 // Zone#: Guard against zones with no players and time over
@@ -17,12 +25,13 @@
 // Loop Back: Choose which Zone# gets to be active
 
 #define timeOver time == 0;
-// This should change once we allow running when players don't have the ball
+
 #define isTeam0InPossession teamInPossessionOfBall == 0;
 #define isTeam1InPossession teamInPossessionOfBall == 1;
 
 #define doesTeam0HaveBallInZone0 isTeam0InPossession && ballInZone == 0; 
 #define doesTeam0HavePlayersInZone0 numOfTeam0PlayersInZone[0] > 0;
+#define doesTeam0HaveMoreThanOnePlayerInZone0 numOfTeam0PlayersInZone[0] > 1;
 #define doesTeam0HaveBallInZone1 isTeam0InPossession && ballInZone == 1;
 #define doesTeam0HavePlayersInZone1 numOfTeam0PlayersInZone[1] > 0;
 
@@ -30,6 +39,7 @@
 #define doesTeam1HavePlayersInZone0 numOfTeam1PlayersInZone[0] > 0;
 #define doesTeam1HaveBallInZone1 isTeam1InPossession && ballInZone == 1;
 #define doesTeam1HavePlayersInZone1 numOfTeam1PlayersInZone[1] > 0;
+#define doesTeam1HaveMoreThanOnePlayerInZone1 numOfTeam1PlayersInZone[1] > 1;
 
 // Some player must be in a zone and time not over in order for the zone to be active
 #define canZone0Act numOfTeam0PlayersInZone[0] + numOfTeam1PlayersInZone[0] > 0 && !timeOver;
@@ -37,11 +47,11 @@
 
 var teamInPossessionOfBall:{0..1} = 0;
 var ballInZone:{0..1} = 0;
-var numOfTeam0PlayersInZone[2] = [1,0];
-var numOfTeam1PlayersInZone[2] = [0,1];
+var numOfTeam0PlayersInZone[2] = [2,0];
+var numOfTeam1PlayersInZone[2] = [0,2];
 var team0Score = 0;
 var team1Score = 0;
-hvar time = 4;
+hvar time = 3;
 
 
 
@@ -53,8 +63,9 @@ Zone0Team0Actions =
 	[doesTeam0HaveBallInZone0 && doesTeam0HavePlayersInZone0] pcase {
 	1: zone0team0shoot{team0Score++; teamInPossessionOfBall=1; ballInZone=1;} -> ResetPlayerPositions
 	1: zone0team0dribble{ballInZone=1; numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock
+	1: [doesTeam0HavePlayersInZone1] zone0team0pass{ballInZone=1;} -> TickTock [] TickTock
 	}
-	[] [doesTeam0HavePlayersInZone0 && !doesTeam0HaveBallInZone0] zone0team0run{numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock;
+	[] [doesTeam0HavePlayersInZone0 && !doesTeam0HaveBallInZone0 || doesTeam0HaveMoreThanOnePlayerInZone0] zone0team0run{numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock;
 
 Zone0Team1Actions = [doesTeam1HaveBallInZone0 && doesTeam1HavePlayersInZone0] pcase {
  	1: zone0team1shoot{team1Score++; teamInPossessionOfBall=0; ballInZone=0;} -> ResetPlayerPositions
@@ -73,8 +84,9 @@ Zone1Team0Actions = [doesTeam0HaveBallInZone1 && doesTeam0HavePlayersInZone1] pc
 Zone1Team1Actions = [doesTeam1HaveBallInZone1 && doesTeam1HavePlayersInZone1] pcase {
 	1: zone1team1shoot{team1Score++; teamInPossessionOfBall=0; ballInZone=0;} -> ResetPlayerPositions
 	1: zone1team1dribble{ballInZone=0; numOfTeam1PlayersInZone[0]++; numOfTeam1PlayersInZone[1]--;} -> TickTock
+	1: [doesTeam1HavePlayersInZone0] zone1team1pass{ballInZone=0;} -> TickTock [] TickTock
 	} 
-	[] [doesTeam1HavePlayersInZone1 && !doesTeam1HaveBallInZone1] zone1team1run{numOfTeam1PlayersInZone[0]++; numOfTeam1PlayersInZone[1]--;} -> TickTock;
+	[] [doesTeam1HavePlayersInZone1 && !doesTeam1HaveBallInZone1 || doesTeam1HaveMoreThanOnePlayerInZone1] zone1team1run{numOfTeam1PlayersInZone[0]++; numOfTeam1PlayersInZone[1]--;} -> TickTock;
 
 
 // ========== Soccer Match ========== //
@@ -85,7 +97,7 @@ Whokickoff = pcase {
 };
 PlayGame = Whokickoff; (TickTock);
 TickTock = timed{time--} -> (Zone0 [] Zone1);
-ResetPlayerPositions = resetpositions{numOfTeam0PlayersInZone[0]=1; numOfTeam0PlayersInZone[1]=0; numOfTeam1PlayersInZone[0]=0; numOfTeam1PlayersInZone[1]=1;} -> TickTock;
+ResetPlayerPositions = resetpositions{numOfTeam0PlayersInZone[0]=2; numOfTeam0PlayersInZone[1]=0; numOfTeam1PlayersInZone[0]=0; numOfTeam1PlayersInZone[1]=2;} -> TickTock;
 
 
 // ========== Verifications ========== //
