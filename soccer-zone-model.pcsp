@@ -51,7 +51,7 @@ var numOfTeam0PlayersInZone[2] = [2,0];
 var numOfTeam1PlayersInZone[2] = [0,2];
 var team0Score = 0;
 var team1Score = 0;
-hvar time = 3;
+hvar time = 10;
 
 // ========== Success and Failure Choices ========== //
 // ========== Shoots ========== //
