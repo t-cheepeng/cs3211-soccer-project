@@ -53,6 +53,8 @@ var team0Score = 0;
 var team1Score = 0;
 hvar time = 3;
 
+// ========== Success and Failure Choices ========== //
+
 
 
 // ========== Zone 0 ========== //
@@ -63,7 +65,7 @@ Zone0Team0Actions =
 	[doesTeam0HaveBallInZone0 && doesTeam0HavePlayersInZone0] pcase {
 	1: zone0team0shoot{team0Score++; teamInPossessionOfBall=1; ballInZone=1;} -> ResetPlayerPositions
 	1: zone0team0dribble{ballInZone=1; numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock
-	1: [doesTeam0HavePlayersInZone1] zone0team0pass{ballInZone=1;} -> TickTock [] TickTock
+	1: [doesTeam0HavePlayersInZone1] zone0team0pass{ballInZone=1;} -> TickTock
 	}
 	[] [doesTeam0HavePlayersInZone0 && !doesTeam0HaveBallInZone0 || doesTeam0HaveMoreThanOnePlayerInZone0] zone0team0run{numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock;
 
@@ -84,7 +86,7 @@ Zone1Team0Actions = [doesTeam0HaveBallInZone1 && doesTeam0HavePlayersInZone1] pc
 Zone1Team1Actions = [doesTeam1HaveBallInZone1 && doesTeam1HavePlayersInZone1] pcase {
 	1: zone1team1shoot{team1Score++; teamInPossessionOfBall=0; ballInZone=0;} -> ResetPlayerPositions
 	1: zone1team1dribble{ballInZone=0; numOfTeam1PlayersInZone[0]++; numOfTeam1PlayersInZone[1]--;} -> TickTock
-	1: [doesTeam1HavePlayersInZone0] zone1team1pass{ballInZone=0;} -> TickTock [] TickTock
+	1: [doesTeam1HavePlayersInZone0] zone1team1pass{ballInZone=0;} -> TickTock
 	} 
 	[] [doesTeam1HavePlayersInZone1 && !doesTeam1HaveBallInZone1 || doesTeam1HaveMoreThanOnePlayerInZone1] zone1team1run{numOfTeam1PlayersInZone[0]++; numOfTeam1PlayersInZone[1]--;} -> TickTock;
 
