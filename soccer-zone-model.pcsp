@@ -51,7 +51,7 @@ var numOfTeam0PlayersInZone[2] = [2,0];
 var numOfTeam1PlayersInZone[2] = [0,2];
 var team0Score = 0;
 var team1Score = 0;
-hvar time = 10;
+hvar time = 2;
 
 // ========== Success and Failure Choices ========== //
 // ========== Shoots ========== //
@@ -62,19 +62,19 @@ Team1shootFail 		= team1shootFail{teamInPossessionOfBall=0; ballInZone=0;} -> Re
 
 Zone0team0shoot = pcase	{
 	1:Team0shootSuccess
-	2:Team0shootFail
+	1:Team0shootFail // should be higher since shooting from afar
 };
 Zone1team0shoot = pcase	{
-	2:Team0shootSuccess
+	1:Team0shootSuccess
 	1:Team0shootFail
 };
 Zone0team1shoot = pcase	{
-	2:Team1shootSuccess
+	1:Team1shootSuccess
 	1:Team1shootFail
 };
 Zone1team1shoot = pcase	{
 	1:Team1shootSuccess
-	2:Team1shootFail
+	1:Team1shootFail // should be higher since shooting from afar
 };
 
 
@@ -85,7 +85,6 @@ Zone0Actions = Zone0Team0Actions [] Zone0Team1Actions;
 
 Zone0Team0Actions = 
 	[doesTeam0HaveBallInZone0 && doesTeam0HavePlayersInZone0] pcase {
-//	1: team0shootSuccess{team0Score++; teamInPossessionOfBall=1; ballInZone=1;} -> ResetPlayerPositions
 	1: Zone0team0shoot
 	1: zone0team0dribble{ballInZone=1; numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock
 	1: [doesTeam0HavePlayersInZone1] zone0team0pass{ballInZone=1;} -> TickTock [] TickTock
@@ -93,10 +92,8 @@ Zone0Team0Actions =
 	[] [doesTeam0HavePlayersInZone0 && !doesTeam0HaveBallInZone0 || doesTeam0HaveMoreThanOnePlayerInZone0] zone0team0run{numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock;
 
 Zone0Team1Actions = [doesTeam1HaveBallInZone0 && doesTeam1HavePlayersInZone0] pcase {
-//	1: team0shootSuccess{team0Score++; teamInPossessionOfBall=1; ballInZone=1;} -> ResetPlayerPositions
  	1: Zone0team1shoot
 };
-
 
 
 // ========== Zone 1 ========== //
@@ -104,12 +101,10 @@ Zone1 =  [canZone1Act] Zone1Actions [] [timeOver] Skip;
 Zone1Actions = Zone1Team0Actions [] Zone1Team1Actions;
 
 Zone1Team0Actions = [doesTeam0HaveBallInZone1 && doesTeam0HavePlayersInZone1] pcase {
-//	1: team1shootSuccess{team1Score++; teamInPossessionOfBall=0; ballInZone=0;} -> ResetPlayerPositions
 	1: Zone1team0shoot
 };
 
 Zone1Team1Actions = [doesTeam1HaveBallInZone1 && doesTeam1HavePlayersInZone1] pcase {
-//	1: team1shootSuccess{team1Score++; teamInPossessionOfBall=0; ballInZone=0;} -> ResetPlayerPositions
 	1: Zone1team1shoot
 	1: zone1team1dribble{ballInZone=0; numOfTeam1PlayersInZone[0]++; numOfTeam1PlayersInZone[1]--;} -> TickTock
 	1: [doesTeam1HavePlayersInZone0] zone1team1pass{ballInZone=0;} -> TickTock [] TickTock
@@ -123,9 +118,19 @@ Whokickoff = pcase {
 	1: team0kickoff{teamInPossessionOfBall = 0; ballInZone=0;} -> Skip
 	1: team1kickoff{teamInPossessionOfBall = 1; ballInZone=1;} -> Skip
 };
+
+//Whokickoff =
+//	team0kickoff{teamInPossessionOfBall = 0; ballInZone=0;} -> Skip []
+//	team1kickoff{teamInPossessionOfBall = 1; ballInZone=1;} -> Skip;
+
 PlayGame = Whokickoff; (TickTock);
 TickTock = timed{time--} -> (Zone0 [] Zone1);
-ResetPlayerPositions = resetpositions{numOfTeam0PlayersInZone[0]=2; numOfTeam0PlayersInZone[1]=0; numOfTeam1PlayersInZone[0]=0; numOfTeam1PlayersInZone[1]=2;} -> TickTock;
+ResetPlayerPositions = resetpositions{
+							numOfTeam0PlayersInZone[0]=2; 
+							numOfTeam0PlayersInZone[1]=0; 
+							numOfTeam1PlayersInZone[0]=0; 
+							numOfTeam1PlayersInZone[1]=2;
+						} -> TickTock;
 
 
 // ========== Verifications ========== //
