@@ -24,6 +24,8 @@
 // Zone#Team#Actions: Team# actual actions in Zone#
 // Loop Back: Choose which Zone# gets to be active
 
+#import "PAT.Lib.SoccerStateHelper";
+
 #define timeOver time == 0;
 
 #define isTeam0InPossession teamInPossessionOfBall == 0;
@@ -41,17 +43,13 @@
 #define doesTeam1HavePlayersInZone1 numOfTeam1PlayersInZone[1] > 0;
 #define doesTeam1HaveMoreThanOnePlayerInZone1 numOfTeam1PlayersInZone[1] > 1;
 
-// Some player must be in a zone and time not over in order for the zone to be active
-#define canZone0Act numOfTeam0PlayersInZone[0] + numOfTeam1PlayersInZone[0] > 0 && !timeOver;
-#define canZone1Act numOfTeam0PlayersInZone[1] + numOfTeam1PlayersInZone[1] > 0 && !timeOver;
-
 var teamInPossessionOfBall:{0..1} = 0;
 var ballInZone:{0..1} = 0;
 var numOfTeam0PlayersInZone[2] = [2,0];
 var numOfTeam1PlayersInZone[2] = [0,2];
 var team0Score = 0;
 var team1Score = 0;
-hvar time = 75;
+hvar time = 3;
 
 // ========== Success and Failure Choices ========== //
 // ========== Shoots ========== //
@@ -116,43 +114,28 @@ Zone1team1pass = pcase {
 	1:Team1passFail
 };
 
-// ========== Run ========== //
-Zone0team0run = [doesTeam0HavePlayersInZone0 && !doesTeam0HaveBallInZone0 || doesTeam0HaveMoreThanOnePlayerInZone0] 
-				zone0team0run{numOfTeam0PlayersInZone[0]--; numOfTeam0PlayersInZone[1]++;} -> TickTock;
-Zone1team1run = [doesTeam1HavePlayersInZone1 && !doesTeam1HaveBallInZone1 || doesTeam1HaveMoreThanOnePlayerInZone1] 
-				zone1team1run{numOfTeam1PlayersInZone[0]++; numOfTeam1PlayersInZone[1]--;} -> TickTock;
+ZoneTeamShoot(zoneNum, teamNum) = if (zoneNum == 0) { if (teamNum == 0) {Zone0team0shoot} else {Zone0team1shoot} } else { if (teamNum == 0) {Zone1team0shoot} else {Zone1team1shoot} };
+ZoneTeamDribble(zoneNum, teamNum) = if (zoneNum == 0) { if (teamNum == 0) {Zone0team0dribble} } else  {Zone1team1dribble} ;
+ZoneTeamPass(zoneNum, teamNum) = if (zoneNum == 0) { if (teamNum == 0) {Zone0team0pass} } else {Zone1team1pass};
+ZoneTeamRun(zoneNum, teamNum) = [call(canZoneTeamRun, zoneNum, teamNum, teamInPossessionOfBall, ballInZone, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)] 
+	zoneTeamRun.zoneNum.teamNum {
+		if (teamNum == 0) {
+			numOfTeam0PlayersInZone[zoneNum]--;
+			numOfTeam0PlayersInZone[zoneNum+1]++;
+		} else {
+			numOfTeam1PlayersInZone[zoneNum]--;
+			numOfTeam1PlayersInZone[zoneNum-1]++;
+		}
+	} -> TickTock;
 
-// ========== Zone 0 ========== //
-Zone0 = [canZone0Act] Zone0Actions [] [timeOver] Skip;
-Zone0Actions = Zone0Team0Actions [] Zone0Team1Actions;
-
-Zone0Team0Actions = 
-	[doesTeam0HaveBallInZone0 && doesTeam0HavePlayersInZone0] pcase {
-	1: Zone0team0shoot
-	1: Zone0team0dribble
-	1: Zone0team0pass
-	}
-	[] Zone0team0run;
-
-Zone0Team1Actions = [doesTeam1HaveBallInZone0 && doesTeam1HavePlayersInZone0] pcase {
- 	1: Zone0team1shoot
-};
-
-
-// ========== Zone 1 ========== //
-Zone1 =  [canZone1Act] Zone1Actions [] [timeOver] Skip;
-Zone1Actions = Zone1Team0Actions [] Zone1Team1Actions;
-
-Zone1Team0Actions = [doesTeam0HaveBallInZone1 && doesTeam0HavePlayersInZone1] pcase {
-	1: Zone1team0shoot
-};
-
-Zone1Team1Actions = [doesTeam1HaveBallInZone1 && doesTeam1HavePlayersInZone1] pcase {
-	1: Zone1team1shoot
-	1: Zone1team1dribble
-	1: Zone1team1pass
-	} 
-	[] Zone1team1run;
+ZoneTeamActions(zoneNum, teamNum) = [call(doesTeamHaveBallInZone, teamNum, zoneNum, teamInPossessionOfBall, ballInZone) && call(doesTeamHavePlayersInZone, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)] pcase {
+		1: ZoneTeamShoot(zoneNum, teamNum)
+		1: ZoneTeamDribble(zoneNum, teamNum)
+		1: ZoneTeamPass(zoneNum, teamNum)
+	 }
+	 [] ZoneTeamRun(zoneNum, teamNum);
+ZoneActions(zoneNum) = [] teamNum:{0..1} @ ZoneTeamActions(zoneNum, teamNum);
+Zone(i) = [call(canZoneAct, numOfTeam0PlayersInZone[i] + numOfTeam1PlayersInZone[i], time)] ZoneActions(i) [] [timeOver] Skip;
 
 
 // ========== Soccer Match ========== //
@@ -162,12 +145,8 @@ Whokickoff = pcase {
 	1: team1kickoff{teamInPossessionOfBall = 1; ballInZone=1;} -> Skip
 };
 
-//Whokickoff =
-//	team0kickoff{teamInPossessionOfBall = 0; ballInZone=0;} -> Skip []
-//	team1kickoff{teamInPossessionOfBall = 1; ballInZone=1;} -> Skip;
-
 PlayGame = Whokickoff; (TickTock);
-TickTock = timed{time--} -> (Zone0 [] Zone1);
+TickTock = timed{time--} -> ([]i:{0..1} @ Zone(i));
 ResetPlayerPositions = resetpositions{
 							numOfTeam0PlayersInZone[0]=2; 
 							numOfTeam0PlayersInZone[1]=0; 
@@ -181,6 +160,7 @@ ResetPlayerPositions = resetpositions{
 #define team1Win team0Score < team1Score && timeOver;
 #define draw team0Score == team1Score && timeOver;
 
+#assert PlayGame deadlockfree;
 #assert PlayGame reaches team0Win with prob;
 #assert PlayGame reaches team1Win with prob;
 #assert PlayGame reaches draw with prob;
