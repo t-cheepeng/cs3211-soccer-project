@@ -21,7 +21,7 @@ namespace PAT.Lib
     /// </summary>
     public class SoccerStateHelper
     {
-        public const int NUM_ZONES = 2;
+        public const int NUM_ZONES = 4;
 
         // Check if a given team is in possession of the ball
         public static bool isTeamInPossessionOfBall(int team, int possession)

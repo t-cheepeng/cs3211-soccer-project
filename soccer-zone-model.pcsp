@@ -27,14 +27,14 @@
 #import "PAT.Lib.SoccerStateHelper";
 
 #define timeOver time == 0;
-#define N 2; // Number of zones
+#define N 4; // Number of zones
 
 var teamInPossessionOfBall:{0..1} = 0;
 var ballInZone:{0..N-1} = 0;
-var numOfTeam0PlayersInZone[N] = [2, 0];
-var numOfTeam1PlayersInZone[N] = [0, 2];
+var numOfTeam0PlayersInZone[N] = [2, 0, 0, 0];
+var numOfTeam1PlayersInZone[N] = [0, 0, 0, 2];
 var score = [0, 0];
-var time = 20;
+var time = 10;
 
 // ========== Soccer Match ========== //
 // Main game
@@ -54,8 +54,12 @@ TickTock = timed{time--} -> ([]i:{0..N-1} @ Zone(i));
 ResetPlayerPositions = resetpositions{
 	numOfTeam0PlayersInZone[0]=2; 
 	numOfTeam0PlayersInZone[1]=0; 
+	numOfTeam0PlayersInZone[2]=0; 
+	numOfTeam0PlayersInZone[3]=0; 
 	numOfTeam1PlayersInZone[0]=0; 
-	numOfTeam1PlayersInZone[1]=2;
+	numOfTeam1PlayersInZone[1]=0;
+	numOfTeam1PlayersInZone[2]=0; 
+	numOfTeam1PlayersInZone[3]=2;
 } -> Skip;
 
 // ========== Zone ========== //
