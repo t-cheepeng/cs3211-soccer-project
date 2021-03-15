@@ -184,7 +184,7 @@ namespace PAT.Lib
                 return false;
             }
 
-						return true;
+            return true;
         }
 
         public static bool
@@ -262,28 +262,13 @@ namespace PAT.Lib
             int[] numOfTeam1PlayersInZone
         )
         {
+            // No player teammate in zone, cannot run
             if (
-                !(
-                doesTeamHavePlayersInZone(team,
+                !doesTeamHavePlayersInZone(team,
                 zone,
                 numOfTeam0PlayersInZone,
-                numOfTeam1PlayersInZone) &&
-                !doesTeamHaveBallInZone(team,
-                zone,
-                teamInPossession,
-                ballInZone)
-                )
+                numOfTeam1PlayersInZone)
             )
-            {
-                return false;
-            }
-
-            // Terminal zone. Team 0 running to the right cannot run past the last index of zone. similar for team 1
-            if (team == 0 && zone == NUM_ZONES - 1)
-            {
-                return false;
-            }
-            if (team == 1 && zone == 0)
             {
                 return false;
             }
@@ -293,15 +278,25 @@ namespace PAT.Lib
                     ? numOfTeam0PlayersInZone[zone] > 1
                     : numOfTeam1PlayersInZone[zone] > 1;
 
-            // More than one player case
-            // If there are more than one player in the zone, the zone can run
+            // More than one teammate in the zone, can run
             if (moreThanOne)
             {
                 return true;
             }
 
-            // One player case
+            // Single teammate and has ball, cannot run
+            if (
+                doesTeamHaveBallInZone(team,
+                zone,
+                teamInPossession,
+                ballInZone)
+            )
+            {
+                return false;
+            }
+
             // Starting zone. The starting zone requires a goalkeeper
+						// Single teammate at starting zone and has no ball, cannot run
             if (team == 0 && zone == 0)
             {
                 return false;
@@ -310,6 +305,26 @@ namespace PAT.Lib
             {
                 return false;
             }
+
+						// Single teammante not at starting zone and has no ball, can run
+            return true;
+        }
+
+        public static bool
+        canRunToZone(
+            int team,
+            int zone,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone,
+            int toZone
+        )
+        {
+            // Terminal zone. Cannot run past the last index of zone.
+            if (toZone < 0 || toZone >= NUM_ZONES)
+            {
+                return false;
+            }
+
             return true;
         }
 

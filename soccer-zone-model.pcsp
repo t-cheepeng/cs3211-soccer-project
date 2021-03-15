@@ -27,11 +27,12 @@
 #import "PAT.Lib.SoccerStateHelper";
 
 #define timeOver time == 0;
+#define N 2; // Number of zones
 
 var teamInPossessionOfBall:{0..1} = 0;
-var ballInZone:{0..1} = 0;
-var numOfTeam0PlayersInZone[2] = [2,0];
-var numOfTeam1PlayersInZone[2] = [0,2];
+var ballInZone:{0..N-1} = 0;
+var numOfTeam0PlayersInZone[N] = [2, 0];
+var numOfTeam1PlayersInZone[N] = [0, 2];
 var score = [0, 0];
 var time = 20;
 
@@ -47,7 +48,7 @@ KickOff = pcase {
 };
 
 // Decrement time and let a single zone perform an action
-TickTock = timed{time--} -> ([]i:{0..1} @ Zone(i));
+TickTock = timed{time--} -> ([]i:{0..N-1} @ Zone(i));
 
 // Reset player positions
 ResetPlayerPositions = resetpositions{
@@ -88,10 +89,10 @@ ShootSuccess(teamNum, zoneNum) = shootSuccess.teamNum.zoneNum{
 	score[teamNum]++; 
 	if (teamNum == 0) {
 		teamInPossessionOfBall = 1;
-		ballInZone=1;
+		ballInZone = N - 1;
 	} else {
 		teamInPossessionOfBall = 0;
-		ballInZone=0;
+		ballInZone = 0;
 	}
 } -> ResetPlayerPositions;
 
@@ -99,10 +100,10 @@ ShootSuccess(teamNum, zoneNum) = shootSuccess.teamNum.zoneNum{
 ShootFail(teamNum, zoneNum) = shootFail.teamNum.zoneNum{
 	if (teamNum == 0) {
 		teamInPossessionOfBall = 1;
-		ballInZone=1;
+		ballInZone = N - 1;
 	} else {
 		teamInPossessionOfBall = 0;
-		ballInZone=0;
+		ballInZone = 0;
 	}
 } -> Skip;
 
@@ -142,7 +143,7 @@ DribbleFail(teamNum, zoneNum, toZone) = dribbleFail.teamNum.zoneNum.toZone{
 
 // ========== Pass ========== //
 // Can pass to any other zone with teammate
-Pass(teamNum, zoneNum) = [] toZone:{0..1} @ PassTo(teamNum, zoneNum, toZone);
+Pass(teamNum, zoneNum) = [] toZone:{0..N-1} @ PassTo(teamNum, zoneNum, toZone);
 PassTo(teamNum, zoneNum, toZone) = [call(canPassToZone, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZone)] pcase {
 	call(passSuccessRate)                                                                 : PassSuccess(teamNum, zoneNum, toZone)
 	call(passFailRate, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): PassFail(teamNum, zoneNum, toZone) 
@@ -165,14 +166,15 @@ PassFail(teamNum, zoneNum, toZone) = passFail.teamNum.zoneNum.toZone{
 
 
 // =========== Run ============ //
-Run(teamNum, zoneNum) =
-runSuccess.teamNum.zoneNum {
+// Can run forward or backward
+Run(teamNum, zoneNum) = RunTo(teamNum, zoneNum, zoneNum+1) [] RunTo(teamNum, zoneNum, zoneNum-1);
+RunTo(teamNum, zoneNum, toZone) = [call(canRunToZone, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZone)] runSuccess.teamNum.zoneNum {
 	if (teamNum == 0) {
 		numOfTeam0PlayersInZone[zoneNum]--;
-		numOfTeam0PlayersInZone[zoneNum+1]++;
+		numOfTeam0PlayersInZone[toZone]++;
 	} else {
 		numOfTeam1PlayersInZone[zoneNum]--;
-		numOfTeam1PlayersInZone[zoneNum-1]++;
+		numOfTeam1PlayersInZone[toZone]++;
 	}
 } -> Skip;
 
