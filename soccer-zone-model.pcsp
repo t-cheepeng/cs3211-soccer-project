@@ -44,7 +44,7 @@ PlayGame = KickOff; (TickTock);
 // Starting kickoff can be either team
 KickOff = pcase {
 	1: team0kickoff{teamInPossessionOfBall = 0; ballInZone=0;} -> Skip
-	1: team1kickoff{teamInPossessionOfBall = 1; ballInZone=1;} -> Skip
+	1: team1kickoff{teamInPossessionOfBall = 1; ballInZone=N-1;} -> Skip
 };
 
 // Decrement time and let a single zone perform an action
