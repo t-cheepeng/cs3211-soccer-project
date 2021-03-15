@@ -59,17 +59,18 @@ ResetPlayerPositions = resetpositions{
 
 // ========== Zone ========== //
 Zone(zoneNum) = 
-[call(canZoneAct, numOfTeam0PlayersInZone[zoneNum] + numOfTeam1PlayersInZone[zoneNum], time)] ([] teamNum:{0..1} @ Actions(zoneNum, teamNum)); TickTock // Perform an action for a zone that can act
+[call(canZoneAct, numOfTeam0PlayersInZone[zoneNum] + numOfTeam1PlayersInZone[zoneNum], time)] ([] teamNum:{0..1} @ Actions(teamNum, zoneNum)); TickTock // Perform an action for a zone that can act
 [] 
 [timeOver] Skip; // End if time is over
 
-Actions(zoneNum, teamNum) = 
+Actions(teamNum, zoneNum) = 
 [call(canTeamZoneAct, teamNum, zoneNum, teamInPossessionOfBall, ballInZone, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)] pcase {
-		call(shootActionRate, teamNum, zoneNum, teamInPossessionOfBall, ballInZone):                                                     Shoot(teamNum, zoneNum)
-		call(dribbleActionRate, teamNum, zoneNum, teamInPossessionOfBall, ballInZone, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): Dribble(zoneNum, teamNum)
-//		1: ZoneTeamPass(zoneNum, teamNum)
-		call(runActionRate, teamNum, zoneNum, teamInPossessionOfBall, ballInZone, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone):     Run(zoneNum, teamNum)
+		call(shootActionRate, teamNum, zoneNum, teamInPossessionOfBall, ballInZone, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)  : Shoot(teamNum, zoneNum)
+		call(dribbleActionRate, teamNum, zoneNum, teamInPossessionOfBall, ballInZone, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): Dribble(teamNum, zoneNum)
+		call(passActionRate, teamNum, zoneNum, teamInPossessionOfBall, ballInZone, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)   : Pass(teamNum, zoneNum)
+		call(runActionRate, teamNum, zoneNum, teamInPossessionOfBall, ballInZone, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)    : Run(teamNum, zoneNum)
 };
+
 
 
 // ############################# //
@@ -77,8 +78,13 @@ Actions(zoneNum, teamNum) =
 // ############################# //
 
 // ========== Shoots =========== //
+Shoot(teamNum, zoneNum) = pcase {
+	call(shootSuccessRate): ShootSuccess(teamNum, zoneNum)
+	call(shootFailRate)   : ShootFail(teamNum, zoneNum) 
+};
+
 // Success:	Increment score, switch possession, reset player pos
-ShootSuccess(teamNum) = shootSuccess.teamNum{
+ShootSuccess(teamNum, zoneNum) = shootSuccess.teamNum.zoneNum{
 	score[teamNum]++; 
 	if (teamNum == 0) {
 		teamInPossessionOfBall = 1;
@@ -90,7 +96,7 @@ ShootSuccess(teamNum) = shootSuccess.teamNum{
 } -> ResetPlayerPositions;
 
 // Fail: Switch possession, start ball at opponent goal zone
-ShootFail(teamNum) = shootSuccess.teamNum{
+ShootFail(teamNum, zoneNum) = shootFail.teamNum.zoneNum{
 	if (teamNum == 0) {
 		teamInPossessionOfBall = 1;
 		ballInZone=1;
@@ -98,24 +104,18 @@ ShootFail(teamNum) = shootSuccess.teamNum{
 		teamInPossessionOfBall = 0;
 		ballInZone=0;
 	}
-} -> ResetPlayerPositions;
+} -> Skip;
 
-Shoot(teamNum, zoneNum) =
-if (teamNum == 0) {
-	pcase {
-		call(shootSuccessRate): ShootSuccess(teamNum)
-		call(shootFailRate):    ShootFail(teamNum) 
-	}
-} else {
-	pcase {
-		call(shootSuccessRate): ShootSuccess(teamNum)
-		call(shootFailRate):    ShootFail(teamNum) 
-	}
-};
+
 
 // ========== Dribble ========== //
+Dribble(teamNum, zoneNum) = pcase {
+	call(dribbleSuccessRate)                                                                 : DribbleSuccess(teamNum, zoneNum)
+	call(dribbleFailRate, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribbleFail(teamNum, zoneNum) 
+};
+
 // Success:	advance ball to next zone, advance one player to next zone
-DribbleSuccess(teamNum, zoneNum) = dribbleSuccess.teamNum{
+DribbleSuccess(teamNum, zoneNum) = dribbleSuccess.teamNum.zoneNum{
 	if(teamNum == 0) {
 		ballInZone++;
 		numOfTeam0PlayersInZone[zoneNum]--;
@@ -128,7 +128,7 @@ DribbleSuccess(teamNum, zoneNum) = dribbleSuccess.teamNum{
 } -> Skip;
 
 // Fail: switch possession
-DribbleFail(teamNum, zoneNum) = dribbleSuccess.teamNum{
+DribbleFail(teamNum, zoneNum) = dribbleFail.teamNum.zoneNum{
 	if(teamNum == 0) {
 		teamInPossessionOfBall = 1;
 	} else {
@@ -136,39 +136,34 @@ DribbleFail(teamNum, zoneNum) = dribbleSuccess.teamNum{
 	}
 } -> Skip;
 
-Dribble(teamNum, zoneNum) =
-if (teamNum == 0) {
-	pcase {
-		call(dribbleSuccessRate):                                                                  DribbleSuccess(teamNum, zoneNum)
-		call(dribbleFailRate, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribbleFail(teamNum, zoneNum) 
-	}
-} else {
-	pcase {
-		call(dribbleSuccessRate):                                                                  DribbleSuccess(teamNum, zoneNum)
-		call(dribbleFailRate, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribbleFail(teamNum, zoneNum) 
-	}
+
+
+// ========== Pass ========== //
+// Pass will choose to pass to one of the player in front
+Pass(teamNum, zoneNum) = [] toZone:{0..1} @ PassTo(teamNum, zoneNum, toZone);
+PassTo(teamNum, zoneNum, toZone) = [call(canPassToZone, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZone)] pcase {
+	call(passSuccessRate)                                                                 : PassSuccess(teamNum, zoneNum, toZone)
+	call(passFailRate, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): PassFail(teamNum, zoneNum, toZone) 
 };
 
-//// ========== Pass ========== //
-//// Success:	if there exists team member in next zone then advance ball to next zone, else pass to team member in this zone
-//// Fail:	switch possession
-//Team0passSuccess(zoneNum) 	= [doesTeam0HavePlayersInZone1] team0passSuccess{ballInZone=1;} -> TickTock [] TickTock;
-//Team0passFail(zoneNum)		= team0passFail{teamInPossessionOfBall=1;} -> TickTock;
-//Team1passSuccess(zoneNum)	= [doesTeam1HavePlayersInZone0] team1passSuccess{ballInZone=0;} -> TickTock [] TickTock;
-//Team1passFail(zoneNum) 		= team1passFail{teamInPossessionOfBall=0;} -> TickTock;
-//
-//Team0pass(zoneNum) = pcase {
-//	1:Team0passSuccess(zoneNum)
-//	1:Team0passFail(zoneNum)
-//};
-//
-//Team1pass(zoneNum) = pcase {
-//	1:Team1passSuccess(zoneNum)
-//	1:Team1passFail(zoneNum)
-//};
+// Success: ball position change
+PassSuccess(teamNum, zoneNum, toZone) = passSuccess.teamNum.zoneNum.toZone{
+	ballInZone = toZone;
+} -> Skip;
+
+// Fail: switch possession
+PassFail(teamNum, zoneNum, toZone) = passFail.teamNum.zoneNum.toZone{
+	if(teamNum == 0) {
+		teamInPossessionOfBall = 1;
+	} else {
+		teamInPossessionOfBall = 0;
+	}
+} -> Skip;
+
+
 
 // =========== Run ============ //
-Run(zoneNum, teamNum) =
+Run(teamNum, zoneNum) =
 runSuccess.teamNum.zoneNum {
 	if (teamNum == 0) {
 		numOfTeam0PlayersInZone[zoneNum]--;

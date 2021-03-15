@@ -21,16 +21,23 @@ namespace PAT.Lib
     /// </summary>
     public class SoccerStateHelper
     {
+        public const int NUM_ZONES = 2;
+
+        // Check if a given team is in possession of the ball
         public static bool isTeamInPossessionOfBall(int team, int possession)
         {
             return team == possession;
         }
 
+        /// Checks if a zone can act.
+        /// A zone can act if there are players in the zone and time is not over.
         public static bool canZoneAct(int numOfPlayersInZone, int time)
         {
             return numOfPlayersInZone > 0 && time > 0;
         }
 
+        /// Checks if a particular team on the zone can act.
+        /// The team on the zone can act if it can perform any action.
         public static bool
         canTeamZoneAct(
             int team,
@@ -41,32 +48,30 @@ namespace PAT.Lib
             int[] numOfTeam1PlayersInZone
         )
         {
-            if (
-                !doesTeamHavePlayersInZone(team,
-                zone,
-                numOfTeam0PlayersInZone,
-                numOfTeam1PlayersInZone)
-            )
-            {
-                return false;
-            }
-
-            int totalRate =
-                shootActionRate(team, zone, teamInPossession, ballInZone) +
-                runActionRate(team,
-                zone,
-                teamInPossession,
-                ballInZone,
-                numOfTeam0PlayersInZone,
-                numOfTeam1PlayersInZone) +
-                dribbleActionRate(team,
-                zone,
-                teamInPossession,
-                ballInZone,
-                numOfTeam0PlayersInZone,
-                numOfTeam1PlayersInZone);
-
-            return totalRate > 0; // Total rate cannot be 0
+            return canZoneTeamShoot(team,
+            zone,
+            teamInPossession,
+            ballInZone,
+            numOfTeam0PlayersInZone,
+            numOfTeam1PlayersInZone) ||
+            canZoneTeamDribble(team,
+            zone,
+            teamInPossession,
+            ballInZone,
+            numOfTeam0PlayersInZone,
+            numOfTeam1PlayersInZone) ||
+            canZoneTeamPass(team,
+            zone,
+            teamInPossession,
+            ballInZone,
+            numOfTeam0PlayersInZone,
+            numOfTeam1PlayersInZone) ||
+            canZoneTeamRun(team,
+            zone,
+            teamInPossession,
+            ballInZone,
+            numOfTeam0PlayersInZone,
+            numOfTeam1PlayersInZone);
         }
 
         public static bool
@@ -98,7 +103,147 @@ namespace PAT.Lib
             }
         }
 
-        // Guarenteed to have at least one team player in zone
+        public static bool
+        canZoneTeamShoot(
+            int team,
+            int zone,
+            int teamInPossession,
+            int ballInZone,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone
+        )
+        {
+            if (
+                !(
+                doesTeamHavePlayersInZone(team,
+                zone,
+                numOfTeam0PlayersInZone,
+                numOfTeam1PlayersInZone) &&
+                doesTeamHaveBallInZone(team, zone, teamInPossession, ballInZone)
+                )
+            )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public static bool
+        canZoneTeamDribble(
+            int team,
+            int zone,
+            int teamInPossession,
+            int ballInZone,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone
+        )
+        {
+            if (
+                !(
+                doesTeamHavePlayersInZone(team,
+                zone,
+                numOfTeam0PlayersInZone,
+                numOfTeam1PlayersInZone) &&
+                doesTeamHaveBallInZone(team, zone, teamInPossession, ballInZone)
+                )
+            )
+            {
+                return false;
+            }
+
+            // Terminal zone. Team 0 dribbling to the right cannot dribble past the last index of zone. similar for team 1
+            if (team == 0 && zone == NUM_ZONES - 1)
+            {
+                return false;
+            }
+            if (team == 1 && zone == 0)
+            {
+                return false;
+            }
+
+            // Starting zone. The starting zone requires a goalkeeper
+            if (team == 0 && zone == 0 && numOfTeam0PlayersInZone[zone] == 1)
+            {
+                return false;
+            }
+            if (
+                team == 1 &&
+                zone == NUM_ZONES - 1 &&
+                numOfTeam1PlayersInZone[zone] == 1
+            )
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public static bool
+        canZoneTeamPass(
+            int team,
+            int zone,
+            int teamInPossession,
+            int ballInZone,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone
+        )
+        {
+            if (
+                !(
+                doesTeamHavePlayersInZone(team,
+                zone,
+                numOfTeam0PlayersInZone,
+                numOfTeam1PlayersInZone) &&
+                doesTeamHaveBallInZone(team, zone, teamInPossession, ballInZone)
+                )
+            )
+            {
+                return false;
+            }
+
+            // Check if there is any teammate in any other zone
+            for (int i = 0; i < NUM_ZONES; i++)
+            {
+                if (
+                    canPassToZone(team,
+                    zone,
+                    numOfTeam0PlayersInZone,
+                    numOfTeam1PlayersInZone,
+                    i)
+                )
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static bool
+        canPassToZone(
+            int team,
+            int zone,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone,
+            int toZone
+        )
+        {
+            if (zone == toZone)
+            {
+                return false;
+            }
+
+            if (team == 0)
+            {
+                return numOfTeam0PlayersInZone[toZone] > 0;
+            }
+            else
+            {
+                return numOfTeam1PlayersInZone[toZone] > 0;
+            }
+        }
+
         public static bool
         canZoneTeamRun(
             int team,
@@ -109,8 +254,24 @@ namespace PAT.Lib
             int[] numOfTeam1PlayersInZone
         )
         {
+            if (
+                !(
+                doesTeamHavePlayersInZone(team,
+                zone,
+                numOfTeam0PlayersInZone,
+                numOfTeam1PlayersInZone) &&
+                !doesTeamHaveBallInZone(team,
+                zone,
+                teamInPossession,
+                ballInZone)
+                )
+            )
+            {
+                return false;
+            }
+
             // Terminal zone. Team 0 running to the right cannot run past the last index of zone. similar for team 1
-            if (team == 0 && zone == 1)
+            if (team == 0 && zone == NUM_ZONES - 1)
             {
                 return false;
             }
@@ -137,20 +298,15 @@ namespace PAT.Lib
             {
                 return false;
             }
-            if (team == 1 && zone == 1)
+            if (team == 1 && zone == NUM_ZONES - 1)
             {
                 return false;
             }
-            return !SoccerStateHelper
-                .doesTeamHaveBallInZone(team,
-                zone,
-                teamInPossession,
-                ballInZone);
+            return true;
         }
 
-        // Guarenteed to have at least one team player in zone
-        public static bool
-        canZoneTeamDribble(
+        public static int
+        shootActionRate(
             int team,
             int zone,
             int teamInPossession,
@@ -159,44 +315,13 @@ namespace PAT.Lib
             int[] numOfTeam1PlayersInZone
         )
         {
-            // Terminal zone. Team 0 dribbling to the right cannot dribble past the last index of zone. similar for team 1
-            if (team == 0 && zone == 1)
-            {
-                return false;
-            }
-            if (team == 1 && zone == 0)
-            {
-                return false;
-            }
-
-            // Starting zone. The starting zone requires a goalkeeper
-            if (team == 0 && zone == 0 && numOfTeam0PlayersInZone[zone] == 1)
-            {
-                return false;
-            }
-            if (team == 1 && zone == 1 && numOfTeam1PlayersInZone[zone] == 1)
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        // Guarenteed to have at least one team player in zone
-        public static int
-        shootActionRate(
-            int team,
-            int zone,
-            int teamInPossession,
-            int ballInZone
-        )
-        {
             if (
-                !SoccerStateHelper
-                    .doesTeamHaveBallInZone(team,
-                    zone,
-                    teamInPossession,
-                    ballInZone)
+                !canZoneTeamShoot(team,
+                zone,
+                teamInPossession,
+                ballInZone,
+                numOfTeam0PlayersInZone,
+                numOfTeam1PlayersInZone)
             )
             {
                 return 0;
@@ -204,7 +329,6 @@ namespace PAT.Lib
             return 1;
         }
 
-        // Guarenteed to have at least one team player in zone
         public static int
         dribbleActionRate(
             int team,
@@ -215,16 +339,6 @@ namespace PAT.Lib
             int[] numOfTeam1PlayersInZone
         )
         {
-            if (
-                !SoccerStateHelper
-                    .doesTeamHaveBallInZone(team,
-                    zone,
-                    teamInPossession,
-                    ballInZone)
-            )
-            {
-                return 0;
-            }
             if (
                 !canZoneTeamDribble(team,
                 zone,
@@ -239,16 +353,23 @@ namespace PAT.Lib
             return 1;
         }
 
-        // Guarenteed to have at least one team player in zone
         public static int
-        passActionRate(int team, int zone, int teamInPossession, int ballInZone)
+        passActionRate(
+            int team,
+            int zone,
+            int teamInPossession,
+            int ballInZone,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone
+        )
         {
             if (
-                !SoccerStateHelper
-                    .doesTeamHaveBallInZone(team,
-                    zone,
-                    teamInPossession,
-                    ballInZone)
+                !canZoneTeamPass(team,
+                zone,
+                teamInPossession,
+                ballInZone,
+                numOfTeam0PlayersInZone,
+                numOfTeam1PlayersInZone)
             )
             {
                 return 0;
@@ -256,7 +377,6 @@ namespace PAT.Lib
             return 1;
         }
 
-        // Guarenteed to have at least one team player in zone
         public static int
         runActionRate(
             int team,
@@ -298,6 +418,39 @@ namespace PAT.Lib
 
         public static int
         dribbleFailRate(
+            int team,
+            int zone,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone
+        )
+        {
+            if (team == 0)
+            {
+                // No opponent means no chance of failure
+                if (numOfTeam1PlayersInZone[zone] == 0)
+                {
+                    return 0;
+                }
+                return 1; // Calculations here
+            }
+            else
+            {
+                // No opponent means no chance of failure
+                if (numOfTeam0PlayersInZone[zone] == 0)
+                {
+                    return 0;
+                }
+                return 1; // Calculations here
+            }
+        }
+
+        public static int passSuccessRate()
+        {
+            return 1;
+        }
+
+        public static int
+        passFailRate(
             int team,
             int zone,
             int[] numOfTeam0PlayersInZone,
