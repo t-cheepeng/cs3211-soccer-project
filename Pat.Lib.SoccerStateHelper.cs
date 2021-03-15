@@ -152,17 +152,7 @@ namespace PAT.Lib
                 return false;
             }
 
-            // Terminal zone. Team 0 dribbling to the right cannot dribble past the last index of zone. similar for team 1
-            if (team == 0 && zone == NUM_ZONES - 1)
-            {
-                return false;
-            }
-            if (team == 1 && zone == 0)
-            {
-                return false;
-            }
-
-            // Starting zone. The starting zone requires a goalkeeper
+            // Starting zone. The starting zone requires a goalkeeper (i.e. a single player in the starting zone cannot dribble, must pass/shoot)
             if (team == 0 && zone == 0 && numOfTeam0PlayersInZone[zone] == 1)
             {
                 return false;
@@ -177,6 +167,24 @@ namespace PAT.Lib
             }
 
             return true;
+        }
+
+        public static bool
+        canDribbleToZone(
+            int team,
+            int zone,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone,
+            int toZone
+        )
+        {
+            // Terminal zone. Cannot dribble past the last index of zone.
+            if (toZone < 0 || toZone >= NUM_ZONES)
+            {
+                return false;
+            }
+
+						return true;
         }
 
         public static bool

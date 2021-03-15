@@ -109,26 +109,28 @@ ShootFail(teamNum, zoneNum) = shootFail.teamNum.zoneNum{
 
 
 // ========== Dribble ========== //
-Dribble(teamNum, zoneNum) = pcase {
-	call(dribbleSuccessRate)                                                                 : DribbleSuccess(teamNum, zoneNum)
-	call(dribbleFailRate, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribbleFail(teamNum, zoneNum) 
+// Can dribble forward or backward
+Dribble(teamNum, zoneNum) = DribbleTo(teamNum, zoneNum, zoneNum+1) [] DribbleTo(teamNum, zoneNum, zoneNum-1);
+DribbleTo(teamNum, zoneNum, toZone) = [call(canDribbleToZone, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZone)] pcase {
+	call(dribbleSuccessRate)                                                                 : DribbleSuccess(teamNum, zoneNum, toZone)
+	call(dribbleFailRate, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribbleFail(teamNum, zoneNum, toZone) 
 };
 
-// Success:	advance ball to next zone, advance one player to next zone
-DribbleSuccess(teamNum, zoneNum) = dribbleSuccess.teamNum.zoneNum{
+// Success:	advance ball to toZone, advance one player to toZone
+DribbleSuccess(teamNum, zoneNum, toZone) = dribbleSuccess.teamNum.zoneNum.toZone{
 	if(teamNum == 0) {
-		ballInZone++;
+		ballInZone = toZone;
 		numOfTeam0PlayersInZone[zoneNum]--;
-		numOfTeam0PlayersInZone[zoneNum+1]++;
+		numOfTeam0PlayersInZone[toZone]++;
 	} else {
-		ballInZone--;
+		ballInZone = toZone;
 		numOfTeam1PlayersInZone[zoneNum]--; 
-		numOfTeam1PlayersInZone[zoneNum-1]++;
+		numOfTeam1PlayersInZone[toZone]++;
 	}
 } -> Skip;
 
 // Fail: switch possession
-DribbleFail(teamNum, zoneNum) = dribbleFail.teamNum.zoneNum{
+DribbleFail(teamNum, zoneNum, toZone) = dribbleFail.teamNum.zoneNum.toZone{
 	if(teamNum == 0) {
 		teamInPossessionOfBall = 1;
 	} else {
@@ -139,7 +141,7 @@ DribbleFail(teamNum, zoneNum) = dribbleFail.teamNum.zoneNum{
 
 
 // ========== Pass ========== //
-// Pass will choose to pass to one of the player in front
+// Can pass to any other zone with teammate
 Pass(teamNum, zoneNum) = [] toZone:{0..1} @ PassTo(teamNum, zoneNum, toZone);
 PassTo(teamNum, zoneNum, toZone) = [call(canPassToZone, teamNum, zoneNum, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZone)] pcase {
 	call(passSuccessRate)                                                                 : PassSuccess(teamNum, zoneNum, toZone)
