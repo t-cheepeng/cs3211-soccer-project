@@ -21,7 +21,9 @@ namespace PAT.Lib
     /// </summary>
     public class SoccerStateHelper
     {
-        public const int NUM_ZONES = 4;
+        public const int NUM_ZONES_X = 4;
+
+        public const int NUM_ZONES_Y = 3;
 
         // Check if a given team is in possession of the ball
         public static bool isTeamInPossessionOfBall(int team, int possession)
@@ -41,35 +43,45 @@ namespace PAT.Lib
         public static bool
         canTeamZoneAct(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
         {
             return canZoneTeamShoot(team,
-            zone,
+            zoneX,
+            zoneY,
             teamInPossession,
-            ballInZone,
+            ballPosX,
+            ballPosY,
             numOfTeam0PlayersInZone,
             numOfTeam1PlayersInZone) ||
             canZoneTeamDribble(team,
-            zone,
+            zoneX,
+            zoneY,
             teamInPossession,
-            ballInZone,
+            ballPosX,
+            ballPosY,
             numOfTeam0PlayersInZone,
             numOfTeam1PlayersInZone) ||
             canZoneTeamPass(team,
-            zone,
+            zoneX,
+            zoneY,
             teamInPossession,
-            ballInZone,
+            ballPosX,
+            ballPosY,
             numOfTeam0PlayersInZone,
             numOfTeam1PlayersInZone) ||
             canZoneTeamRun(team,
-            zone,
+            zoneX,
+            zoneY,
             teamInPossession,
-            ballInZone,
+            ballPosX,
+            ballPosY,
             numOfTeam0PlayersInZone,
             numOfTeam1PlayersInZone);
         }
@@ -77,38 +89,45 @@ namespace PAT.Lib
         public static bool
         doesTeamHaveBallInZone(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone
+            int ballPosX,
+            int ballPosY
         )
         {
-            return teamInPossession == team && ballInZone == zone;
+            return teamInPossession == team &&
+            ballPosX == zoneX &&
+            ballPosY == zoneY;
         }
 
         public static bool
         doesTeamHavePlayersInZone(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
         {
             if (team == 0)
             {
-                return numOfTeam0PlayersInZone[zone] > 0;
+                return numOfTeam0PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] > 0;
             }
             else
             {
-                return numOfTeam1PlayersInZone[zone] > 0;
+                return numOfTeam1PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] > 0;
             }
         }
 
         public static bool
         canZoneTeamShoot(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
@@ -116,10 +135,16 @@ namespace PAT.Lib
             if (
                 !(
                 doesTeamHavePlayersInZone(team,
-                zone,
+                zoneX,
+                zoneY,
                 numOfTeam0PlayersInZone,
                 numOfTeam1PlayersInZone) &&
-                doesTeamHaveBallInZone(team, zone, teamInPossession, ballInZone)
+                doesTeamHaveBallInZone(team,
+                zoneX,
+                zoneY,
+                teamInPossession,
+                ballPosX,
+                ballPosY)
                 )
             )
             {
@@ -132,9 +157,11 @@ namespace PAT.Lib
         public static bool
         canZoneTeamDribble(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
@@ -142,10 +169,16 @@ namespace PAT.Lib
             if (
                 !(
                 doesTeamHavePlayersInZone(team,
-                zone,
+                zoneX,
+                zoneY,
                 numOfTeam0PlayersInZone,
                 numOfTeam1PlayersInZone) &&
-                doesTeamHaveBallInZone(team, zone, teamInPossession, ballInZone)
+                doesTeamHaveBallInZone(team,
+                zoneX,
+                zoneY,
+                teamInPossession,
+                ballPosX,
+                ballPosY)
                 )
             )
             {
@@ -153,14 +186,20 @@ namespace PAT.Lib
             }
 
             // Starting zone. The starting zone requires a goalkeeper (i.e. a single player in the starting zone cannot dribble, must pass/shoot)
-            if (team == 0 && zone == 0 && numOfTeam0PlayersInZone[zone] == 1)
+            if (
+                team == 0 &&
+                zoneX == 0 &&
+                zoneY == 1 &&
+                numOfTeam0PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] == 1
+            )
             {
                 return false;
             }
             if (
                 team == 1 &&
-                zone == NUM_ZONES - 1 &&
-                numOfTeam1PlayersInZone[zone] == 1
+                zoneX == NUM_ZONES_X - 1 &&
+                zoneY == 1 &&
+                numOfTeam1PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] == 1
             )
             {
                 return false;
@@ -172,14 +211,21 @@ namespace PAT.Lib
         public static bool
         canDribbleToZone(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone,
-            int toZone
+            int toZoneX,
+            int toZoneY
         )
         {
             // Terminal zone. Cannot dribble past the last index of zone.
-            if (toZone < 0 || toZone >= NUM_ZONES)
+            if (
+                toZoneX < 0 ||
+                toZoneX >= NUM_ZONES_X ||
+                toZoneY < 0 ||
+                toZoneY >= NUM_ZONES_Y
+            )
             {
                 return false;
             }
@@ -190,9 +236,11 @@ namespace PAT.Lib
         public static bool
         canZoneTeamPass(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
@@ -200,10 +248,16 @@ namespace PAT.Lib
             if (
                 !(
                 doesTeamHavePlayersInZone(team,
-                zone,
+                zoneX,
+                zoneY,
                 numOfTeam0PlayersInZone,
                 numOfTeam1PlayersInZone) &&
-                doesTeamHaveBallInZone(team, zone, teamInPossession, ballInZone)
+                doesTeamHaveBallInZone(team,
+                zoneX,
+                zoneY,
+                teamInPossession,
+                ballPosX,
+                ballPosY)
                 )
             )
             {
@@ -211,14 +265,17 @@ namespace PAT.Lib
             }
 
             // Check if there is any teammate in any other zone
-            for (int i = 0; i < NUM_ZONES; i++)
+            for (int i = 0; i < NUM_ZONES_X; i++)
             {
+                for (int j = 0; j < NUM_ZONES_Y; j++)
                 if (
                     canPassToZone(team,
-                    zone,
+                    zoneX,
+                    zoneY,
                     numOfTeam0PlayersInZone,
                     numOfTeam1PlayersInZone,
-                    i)
+                    i,
+                    j)
                 )
                 {
                     return true;
@@ -231,33 +288,41 @@ namespace PAT.Lib
         public static bool
         canPassToZone(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone,
-            int toZone
+            int toZoneX,
+            int toZoneY
         )
         {
-            if (zone == toZone)
+            if (zoneX == toZoneX && zoneY == toZoneY)
             {
                 return false;
             }
 
             if (team == 0)
             {
-                return numOfTeam0PlayersInZone[toZone] > 0;
+                return numOfTeam0PlayersInZone[toZoneX * NUM_ZONES_Y +
+                toZoneY] >
+                0;
             }
             else
             {
-                return numOfTeam1PlayersInZone[toZone] > 0;
+                return numOfTeam1PlayersInZone[toZoneX * NUM_ZONES_Y +
+                toZoneY] >
+                0;
             }
         }
 
         public static bool
         canZoneTeamRun(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
@@ -265,7 +330,8 @@ namespace PAT.Lib
             // No player teammate in zone, cannot run
             if (
                 !doesTeamHavePlayersInZone(team,
-                zone,
+                zoneX,
+                zoneY,
                 numOfTeam0PlayersInZone,
                 numOfTeam1PlayersInZone)
             )
@@ -275,8 +341,8 @@ namespace PAT.Lib
 
             bool moreThanOne =
                 team == 0
-                    ? numOfTeam0PlayersInZone[zone] > 1
-                    : numOfTeam1PlayersInZone[zone] > 1;
+                    ? numOfTeam0PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] > 1
+                    : numOfTeam1PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] > 1;
 
             // More than one teammate in the zone, can run
             if (moreThanOne)
@@ -287,40 +353,49 @@ namespace PAT.Lib
             // Single teammate and has ball, cannot run
             if (
                 doesTeamHaveBallInZone(team,
-                zone,
+                zoneX,
+                zoneY,
                 teamInPossession,
-                ballInZone)
+                ballPosX,
+                ballPosY)
             )
             {
                 return false;
             }
 
             // Starting zone. The starting zone requires a goalkeeper
-						// Single teammate at starting zone and has no ball, cannot run
-            if (team == 0 && zone == 0)
+            // Single teammate at starting zone and has no ball, cannot run
+            if (team == 0 && zoneX == 0 && zoneY == 1)
             {
                 return false;
             }
-            if (team == 1 && zone == NUM_ZONES - 1)
+            if (team == 1 && zoneX == NUM_ZONES_X - 1 && zoneY == 1)
             {
                 return false;
             }
 
-						// Single teammante not at starting zone and has no ball, can run
+            // Single teammante not at starting zone and has no ball, can run
             return true;
         }
 
         public static bool
         canRunToZone(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone,
-            int toZone
+            int toZoneX,
+            int toZoneY
         )
         {
             // Terminal zone. Cannot run past the last index of zone.
-            if (toZone < 0 || toZone >= NUM_ZONES)
+            if (
+                toZoneX < 0 ||
+                toZoneX >= NUM_ZONES_X ||
+                toZoneY < 0 ||
+                toZoneY >= NUM_ZONES_Y
+            )
             {
                 return false;
             }
@@ -331,18 +406,22 @@ namespace PAT.Lib
         public static int
         shootActionRate(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
         {
             if (
                 !canZoneTeamShoot(team,
-                zone,
+                zoneX,
+                zoneY,
                 teamInPossession,
-                ballInZone,
+                ballPosX,
+                ballPosY,
                 numOfTeam0PlayersInZone,
                 numOfTeam1PlayersInZone)
             )
@@ -355,18 +434,22 @@ namespace PAT.Lib
         public static int
         dribbleActionRate(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
         {
             if (
                 !canZoneTeamDribble(team,
-                zone,
+                zoneX,
+                zoneY,
                 teamInPossession,
-                ballInZone,
+                ballPosX,
+                ballPosY,
                 numOfTeam0PlayersInZone,
                 numOfTeam1PlayersInZone)
             )
@@ -379,18 +462,22 @@ namespace PAT.Lib
         public static int
         passActionRate(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
         {
             if (
                 !canZoneTeamPass(team,
-                zone,
+                zoneX,
+                zoneY,
                 teamInPossession,
-                ballInZone,
+                ballPosX,
+                ballPosY,
                 numOfTeam0PlayersInZone,
                 numOfTeam1PlayersInZone)
             )
@@ -403,18 +490,22 @@ namespace PAT.Lib
         public static int
         runActionRate(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int teamInPossession,
-            int ballInZone,
+            int ballPosX,
+            int ballPosY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
         {
             if (
                 !canZoneTeamRun(team,
-                zone,
+                zoneX,
+                zoneY,
                 teamInPossession,
-                ballInZone,
+                ballPosX,
+                ballPosY,
                 numOfTeam0PlayersInZone,
                 numOfTeam1PlayersInZone)
             )
@@ -442,7 +533,8 @@ namespace PAT.Lib
         public static int
         dribbleFailRate(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
@@ -450,7 +542,7 @@ namespace PAT.Lib
             if (team == 0)
             {
                 // No opponent means no chance of failure
-                if (numOfTeam1PlayersInZone[zone] == 0)
+                if (numOfTeam1PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] == 0)
                 {
                     return 0;
                 }
@@ -459,7 +551,7 @@ namespace PAT.Lib
             else
             {
                 // No opponent means no chance of failure
-                if (numOfTeam0PlayersInZone[zone] == 0)
+                if (numOfTeam0PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] == 0)
                 {
                     return 0;
                 }
@@ -475,7 +567,8 @@ namespace PAT.Lib
         public static int
         passFailRate(
             int team,
-            int zone,
+            int zoneX,
+            int zoneY,
             int[] numOfTeam0PlayersInZone,
             int[] numOfTeam1PlayersInZone
         )
@@ -483,7 +576,7 @@ namespace PAT.Lib
             if (team == 0)
             {
                 // No opponent means no chance of failure
-                if (numOfTeam1PlayersInZone[zone] == 0)
+                if (numOfTeam1PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] == 0)
                 {
                     return 0;
                 }
@@ -492,7 +585,7 @@ namespace PAT.Lib
             else
             {
                 // No opponent means no chance of failure
-                if (numOfTeam0PlayersInZone[zone] == 0)
+                if (numOfTeam0PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] == 0)
                 {
                     return 0;
                 }
