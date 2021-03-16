@@ -31,35 +31,35 @@
 #define N_Y 3; // Sideway axis
 
 hvar team0StartFormation[N_X][N_Y] = [
-	0, 3, 0,
-	0, 2, 0,
-	1, 1, 1,
-	0, 2, 0
-];
-hvar team1StartFormation[N_X][N_Y] = [
 	0, 1, 0,
 	1, 1, 1,
-	0, 2, 0,
-	0, 3, 0
+	0, 0, 0,
+	0, 0, 0
+];
+hvar team1StartFormation[N_X][N_Y] = [
+	0, 0, 0,
+	0, 0, 0,
+	1, 1, 1,
+	0, 1, 0
 ];
 
 var teamInPossessionOfBall:{0..1} = 0;
 var ballPosX:{0..N_X-1} = 0;
 var ballPosY:{0..N_Y-1} = 0;
 var numOfTeam0PlayersInZone[N_X][N_Y] = [
-	0, 3, 0,
-	0, 2, 0,
-	1, 1, 1,
-	0, 2, 0
-];
-var numOfTeam1PlayersInZone[N_X][N_Y] = [
 	0, 1, 0,
 	1, 1, 1,
-	0, 2, 0,
-	0, 3, 0
+	0, 0, 0,
+	0, 0, 0
+];
+var numOfTeam1PlayersInZone[N_X][N_Y] = [
+	0, 0, 0,
+	0, 0, 0,
+	1, 1, 1,
+	0, 1, 0
 ];
 var score = [0, 0];
-var time = 10;
+var time = 5;
 
 // ========== Soccer Match ========== //
 // Main game
