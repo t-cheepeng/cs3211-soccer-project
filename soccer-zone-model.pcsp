@@ -1,28 +1,110 @@
 ﻿// TODO List (In order of priority, Highest -> Lowest):
-// 1. Have some C# Helper class to check all the defined things. ABSTRACTION
-// 2. Model failures of shoot, dribble, run and pass
-// 3. Model backward actions 
-// 4. Assign probabilities to success/failure. Probably do this with a C# Helper class again
-// 5. Expand to larger number of zones and larger number of players
+// 1. Assign probabilities to success/failure. Probably do this with a C# Helper class again
+// 2. Expand to larger number of zones and larger number of players - Done but too slow with 11 players
 
-// Model
-// =============================
-// |             |             |             
-// |      0      |      1      |
-// |             |             |
-// =============================
-// Instead of modelling players, we model zones on the field
-// Each zone can have any number of players from either team
-// Two Players only
-// No goalkeeper
-// Players are not allowed to perform actions backwards(ie. all actions move in one direction, from 0 -> 1 or 1 -> 0) for now
-// Successful Shoot and Dribble and Run and Pass completed
-// At each timestep (by time hidden variable), only one zone will take action
-// The process always goes from Zone# -> Zone#Actions -> Zone#Team#Actions -> Loop Back
-// Zone#: Guard against zones with no players and time over
-// Zone#Actions: Choose what team gets to take actions in the zone#
-// Zone#Team#Actions: Team# actual actions in Zone#
-// Loop Back: Choose which Zone# gets to be active
+/*
+ * ========================
+ *           MODEL
+ * ========================
+ * The playing field is modeled as a 2D array with an X-axis (forward-backward) and Y-axis (left-right) value. 
+ * N_X = 4 captures the max size of the X-axis and N_Y = 3 captures the max size of the Y-axis.
+ * Each element of the 2D array is defined as a Zone. i.e. The playing field (0, 0) is a Zone. 
+ * 
+ * -----------------------
+ *  Visual Representation
+ * -----------------------
+ *        Team0's
+ *         Goal
+ * +=====+=====+=====+
+ * | 0,0 | 0,1 | 0,2 |
+ * +=====+=====+=====+
+ * | 1,0 | 1,1 | 1,2 |
+ * +=====+=====+=====+
+ * | 2,0 | 2,1 | 2,2 |
+ * +=====+=====+=====+
+ * | 3,0 | 3,1 | 3,2 |
+ * +=====+=====+=====+
+ *       Team1's
+ *        Goal
+ *
+ * -----------------------
+ *     Shared Variables
+ * -----------------------
+ * team0StartFormation     - Represents the start formation of Team0 by setting the number of players in each zone. 
+ *                           Zone (0, 1) must have at least one player (acting as the goalkeeper)
+ * team1StartFormation     - Represents the start formation of Team1 by setting the number of players in each zone. 
+ *                           Zone (3, 1) must have at least one player (acting as the goalkeeper)
+ * time                    - Represents the number of time units for a game. 
+ *                           Once the time reaches 0, the game is over.
+ * teamInPossessionOfBall  - Represents the team in possession of the ball. 
+ *                           Can only be 0 or 1.
+ * ballPosX                - Represents the X-axis position of the ball on the playing field. 
+ *                           Can take values from 0 to 3.
+ *                           Initial value is not important as it will be set by the KickOff process.
+ * ballPosX                - Represents the Y-axis position of the ball on the playing field. 
+ *                           Can take values from 0 to 2.
+ *                           Initial value is not important as it will be set by the KickOff process.
+ * numOfTeam0PlayersInZone - Represents the number of Team0 players on the playing field. 
+ *                           Initial value is not important as it will be set equivalent to team0StartFormation by the ResetPlayerPositions process.
+ *                           Zone (0, 1) must have at least one player (acting as the goalkeeper)
+ * numOfTeam1PlayersInZone - Represents the number of Team1 players on the playing field. 
+ *                           Initial value is not important as it will be set equivalent to team1StartFormation by the ResetPlayerPositions process.
+ *                           Zone (3, 1) must have at least one player (acting as the goalkeeper)
+ * score                   - Represents the score of each team. 
+ *
+ * -----------------------
+ *        Processes
+ * -----------------------
+ * PlayGame()
+ * Represents a full soccer game using the zone model approach as describe earlier.
+ *
+ * ResetPlayerPositions()
+ * Reset both Teams' position back to the starting formation. 
+ *
+ * KickOff()
+ * Start off the game by giving both team an equal chance of obtaining the possession of the ball. 
+ *
+ * TickTock()
+ * Decrement time by one unit and continue to simulate a single action by a single zone.
+ * This process will be called at the end of each action until game is over (time == 0).
+ * 
+ * Zone(zoneX, zoneY)
+ * Captures both Team0 and Team1 actions that a Zone can perform.
+ * The actions are guarded by a guard clause that checks if the particular zone can perform an action.
+ * When game is over, all Zones will not be able to perform any actions.
+ *
+ * Actions(teamNum, zoneX, zoneY)
+ * Captures all actions that a given team can perform in a given Zone.
+ * It is guarded by a guard clause that checks if the team can perform any actions in the given zone.
+ * i.e. Only when the chance of performing particular action is non-zero for at least one action
+ * Possible Actions: Shoot, Dribble, Pass, Run
+ *
+ * Shoot(teamNum, zoneX, zoneY)
+ * 
+ * ShootSuccess(teamNum, zoneX, zoneY)
+ *
+ * ShootFail(teamNum, zoneX, zoneY)
+ *
+ * Dribble(teamNum, zoneX, zoneY)
+ * 
+ * DribbleTo(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+ *
+ * DribbleSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+ *
+ * DribbleFail(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+ *
+ * Pass(teamNum, zoneX, zoneY)
+ *
+ * PassTo(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+ *
+ * PassSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+ *
+ * PassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+ *
+ * Run(teamNum, zoneX, zoneY)
+ *
+ * RunTo(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+ */
 
 #import "PAT.Lib.SoccerStateHelper";
 
@@ -42,39 +124,32 @@ hvar team1StartFormation[N_X][N_Y] = [
 	1, 1, 1,
 	0, 1, 0
 ];
-
+var time = 5;
 var teamInPossessionOfBall:{0..1} = 0;
 var ballPosX:{0..N_X-1} = 0;
 var ballPosY:{0..N_Y-1} = 0;
 var numOfTeam0PlayersInZone[N_X][N_Y] = [
-	0, 1, 0,
-	1, 1, 1,
+	0, 0, 0,
+	0, 0, 0,
 	0, 0, 0,
 	0, 0, 0
 ];
 var numOfTeam1PlayersInZone[N_X][N_Y] = [
 	0, 0, 0,
 	0, 0, 0,
-	1, 1, 1,
-	0, 1, 0
+	0, 0, 0,
+	0, 0, 0
 ];
 var score = [0, 0];
-var time = 5;
+
 
 // ========== Soccer Match ========== //
 // Main game
-PlayGame = KickOff; (TickTock);
+PlayGame = ResetPlayerPositions; KickOff; (TickTock);
+
+
 
 // ========== Utils Process ========== //
-// Starting kickoff can be either team
-KickOff = pcase {
-	1: kickOff.0{teamInPossessionOfBall = 0; ballPosX = 0;   ballPosY = 1;} -> Skip
-	1: kickOff.1{teamInPossessionOfBall = 1; ballPosX = N_X-1; ballPosY = 1;} -> Skip
-};
-
-// Decrement time and let a single zone perform an action
-TickTock = tau{time--} -> ([]x:{0..N_X-1};y:{0..N_Y-1} @ Zone(x, y));
-
 // Reset player positions
 ResetPlayerPositions = reset{
 	numOfTeam0PlayersInZone[0][0] = team0StartFormation[0][0];
@@ -103,6 +178,17 @@ ResetPlayerPositions = reset{
 	numOfTeam1PlayersInZone[3][1] = team1StartFormation[3][1];
 	numOfTeam1PlayersInZone[3][2] = team1StartFormation[3][2];
 } -> Skip;
+
+// Starting kickoff can be either team
+KickOff = pcase {
+	1: kickOff.0{teamInPossessionOfBall = 0; ballPosX = 0;   ballPosY = 1;} -> Skip
+	1: kickOff.1{teamInPossessionOfBall = 1; ballPosX = N_X-1; ballPosY = 1;} -> Skip
+};
+
+// Decrement time and let a single zone perform an action
+TickTock = tau{time--} -> ([]x:{0..N_X-1};y:{0..N_Y-1} @ Zone(x, y));
+
+
 
 // ========== Zone ========== //
 Zone(zoneX, zoneY) = 
