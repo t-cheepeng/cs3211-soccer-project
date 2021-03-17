@@ -197,15 +197,13 @@ ResetPlayerPositions = reset{
 KickOff(teamNum) = kickOff.0{teamInPossessionOfBall = teamNum; ballPosX = 2; ballPosY = 1;} -> Skip;
 
 // Decrement time and let a single zone perform an action
-TickTock = tau{time--} -> ([]x:{0..N_X-1};y:{0..N_Y-1} @ Zone(x, y));
+TickTock = tau{time--} -> ([!timeOver]([]x:{0..N_X-1};y:{0..N_Y-1} @ Zone(x, y))) [] [timeOver] Skip;
 
 
 
 // ========== Zone ========== //
 Zone(zoneX, zoneY) = 
-[call(canZoneAct, numOfTeam0PlayersInZone[zoneX][zoneY] + numOfTeam1PlayersInZone[zoneX][zoneY], time)] ([] teamNum:{0..1} @ Actions(teamNum, zoneX, zoneY)); TickTock // Perform an action for a zone that can act
-[] 
-[timeOver] Skip; // End if time is over
+[call(canZoneAct, numOfTeam0PlayersInZone[zoneX][zoneY] + numOfTeam1PlayersInZone[zoneX][zoneY])] ([] teamNum:{0..1} @ Actions(teamNum, zoneX, zoneY)); TickTock; // Perform an action for a zone that can act
 
 Actions(teamNum, zoneX, zoneY) = 
 [call(canTeamZoneAct, teamNum, zoneX, zoneY, teamInPossessionOfBall, ballPosX, ballPosY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)] pcase {

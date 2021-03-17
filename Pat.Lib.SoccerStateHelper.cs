@@ -32,10 +32,10 @@ namespace PAT.Lib
         }
 
         /// Checks if a zone can act.
-        /// A zone can act if there are players in the zone and time is not over.
-        public static bool canZoneAct(int numOfPlayersInZone, int time)
+        /// A zone can act if there are players in the zone.
+        public static bool canZoneAct(int numOfPlayersInZone)
         {
-            return numOfPlayersInZone > 0 && time > 0;
+            return numOfPlayersInZone > 0;
         }
 
         /// Checks if a particular team on the zone can act.
