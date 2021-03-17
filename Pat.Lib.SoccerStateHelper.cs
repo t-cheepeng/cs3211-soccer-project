@@ -21,7 +21,7 @@ namespace PAT.Lib
     /// </summary>
     public class SoccerStateHelper
     {
-        public const int NUM_ZONES_X = 4;
+        public const int NUM_ZONES_X = 5;
 
         public const int NUM_ZONES_Y = 3;
 

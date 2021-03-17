@@ -7,7 +7,7 @@
  *           MODEL
  * ========================
  * The playing field is modeled as a 2D array with an X-axis (forward-backward) and Y-axis (left-right) value. 
- * N_X = 4 captures the max size of the X-axis and N_Y = 3 captures the max size of the Y-axis.
+ * N_X = 5 captures the max size of the X-axis and N_Y = 3 captures the max size of the Y-axis.
  * Each element of the 2D array is defined as a Zone. i.e. The playing field (0, 0) is a Zone. 
  * 
  * -----------------------
@@ -24,6 +24,8 @@
  * +=====+=====+=====+
  * | 3,0 | 3,1 | 3,2 |
  * +=====+=====+=====+
+ * | 4,0 | 4,1 | 4,2 |
+ * +=====+=====+=====+
  *       Team1's
  *        Goal
  *
@@ -32,14 +34,16 @@
  * -----------------------
  * team0StartFormation     - Represents the start formation of Team0 by setting the number of players in each zone. 
  *                           Zone (0, 1) must have at least one player (acting as the goalkeeper)
+ *                           Zone (2, 1) must have at least one player (for kickoff)
  * team1StartFormation     - Represents the start formation of Team1 by setting the number of players in each zone. 
- *                           Zone (3, 1) must have at least one player (acting as the goalkeeper)
+ *                           Zone (4, 1) must have at least one player (acting as the goalkeeper)
+ *                           Zone (2, 1) must have at least one player (for kickoff)
  * time                    - Represents the number of time units for a game. 
  *                           Once the time reaches 0, the game is over.
  * teamInPossessionOfBall  - Represents the team in possession of the ball. 
  *                           Can only be 0 or 1.
  * ballPosX                - Represents the X-axis position of the ball on the playing field. 
- *                           Can take values from 0 to 3.
+ *                           Can take values from 0 to 4.
  *                           Initial value is not important as it will be set by the KickOff process.
  * ballPosX                - Represents the Y-axis position of the ball on the playing field. 
  *                           Can take values from 0 to 2.
@@ -49,7 +53,7 @@
  *                           Zone (0, 1) must have at least one player (acting as the goalkeeper)
  * numOfTeam1PlayersInZone - Represents the number of Team1 players on the playing field. 
  *                           Initial value is not important as it will be set equivalent to team1StartFormation by the ResetPlayerPositions process.
- *                           Zone (3, 1) must have at least one player (acting as the goalkeeper)
+ *                           Zone (4, 1) must have at least one player (acting as the goalkeeper)
  * score                   - Represents the score of each team. 
  *
  * -----------------------
@@ -61,8 +65,8 @@
  * ResetPlayerPositions()
  * Reset both Teams' position back to the starting formation. 
  *
- * KickOff()
- * Start off the game by giving both team an equal chance of obtaining the possession of the ball. 
+ * KickOff(teamNum)
+ * Start the game by placing the ball in the middle of the field and giving teamNum the possession of the ball. 
  *
  * TickTock()
  * Decrement time by one unit and continue to simulate a single action by a single zone.
@@ -109,19 +113,21 @@
 #import "PAT.Lib.SoccerStateHelper";
 
 #define timeOver time == 0;
-#define N_X 4; // Forward-backward axis
+#define N_X 5; // Forward-backward axis
 #define N_Y 3; // Sideway axis
 
 hvar team0StartFormation[N_X][N_Y] = [
 	0, 1, 0,
-	1, 1, 1,
+	1, 0, 1,
+	0, 1, 0,
 	0, 0, 0,
 	0, 0, 0
 ];
 hvar team1StartFormation[N_X][N_Y] = [
 	0, 0, 0,
 	0, 0, 0,
-	1, 1, 1,
+	0, 1, 0,
+	1, 0, 1,
 	0, 1, 0
 ];
 var time = 5;
@@ -132,9 +138,11 @@ var numOfTeam0PlayersInZone[N_X][N_Y] = [
 	0, 0, 0,
 	0, 0, 0,
 	0, 0, 0,
+	0, 0, 0,
 	0, 0, 0
 ];
 var numOfTeam1PlayersInZone[N_X][N_Y] = [
+	0, 0, 0,
 	0, 0, 0,
 	0, 0, 0,
 	0, 0, 0,
@@ -145,7 +153,7 @@ var score = [0, 0];
 
 // ========== Soccer Match ========== //
 // Main game
-PlayGame = ResetPlayerPositions; KickOff; (TickTock);
+PlayGame = ResetPlayerPositions; pcase{1: KickOff(0) 1: KickOff(1)}; TickTock;
 
 
 
@@ -164,6 +172,9 @@ ResetPlayerPositions = reset{
 	numOfTeam0PlayersInZone[3][0] = team0StartFormation[3][0];
 	numOfTeam0PlayersInZone[3][1] = team0StartFormation[3][1];
 	numOfTeam0PlayersInZone[3][2] = team0StartFormation[3][2];
+	numOfTeam0PlayersInZone[4][0] = team0StartFormation[4][0];
+	numOfTeam0PlayersInZone[4][1] = team0StartFormation[4][1];
+	numOfTeam0PlayersInZone[4][2] = team0StartFormation[4][2];
 
 	numOfTeam1PlayersInZone[0][0] = team1StartFormation[0][0];
 	numOfTeam1PlayersInZone[0][1] = team1StartFormation[0][1];
@@ -177,13 +188,13 @@ ResetPlayerPositions = reset{
 	numOfTeam1PlayersInZone[3][0] = team1StartFormation[3][0];
 	numOfTeam1PlayersInZone[3][1] = team1StartFormation[3][1];
 	numOfTeam1PlayersInZone[3][2] = team1StartFormation[3][2];
+	numOfTeam1PlayersInZone[4][0] = team1StartFormation[4][0];
+	numOfTeam1PlayersInZone[4][1] = team1StartFormation[4][1];
+	numOfTeam1PlayersInZone[4][2] = team1StartFormation[4][2];
 } -> Skip;
 
-// Starting kickoff can be either team
-KickOff = pcase {
-	1: kickOff.0{teamInPossessionOfBall = 0; ballPosX = 0;   ballPosY = 1;} -> Skip
-	1: kickOff.1{teamInPossessionOfBall = 1; ballPosX = N_X-1; ballPosY = 1;} -> Skip
-};
+// Kickoff
+KickOff(teamNum) = kickOff.0{teamInPossessionOfBall = teamNum; ballPosX = 2; ballPosY = 1;} -> Skip;
 
 // Decrement time and let a single zone perform an action
 TickTock = tau{time--} -> ([]x:{0..N_X-1};y:{0..N_Y-1} @ Zone(x, y));
@@ -219,16 +230,7 @@ Shoot(teamNum, zoneX, zoneY) = pcase {
 // Success:	Increment score, switch possession, reset player pos
 ShootSuccess(teamNum, zoneX, zoneY) = shootSuccess.teamNum.zoneX.zoneY{
 	score[teamNum]++; 
-	if (teamNum == 0) {
-		teamInPossessionOfBall = 1;
-		ballPosX = N_X - 1;
-		ballPosY = 1;
-	} else {
-		teamInPossessionOfBall = 0;
-		ballPosX = 0;
-		ballPosY = 1;
-	}
-} -> ResetPlayerPositions;
+} -> ResetPlayerPositions; KickOff(1 - teamNum);
 
 // Fail: Switch possession, start ball at opponent goal zone
 ShootFail(teamNum, zoneX, zoneY) = shootFail.teamNum.zoneX.zoneY{
@@ -246,12 +248,17 @@ ShootFail(teamNum, zoneX, zoneY) = shootFail.teamNum.zoneX.zoneY{
 
 
 // ========== Dribble ========== //
-// Can dribble forward or backward
+// Can dribble forward or sideward
 Dribble(teamNum, zoneX, zoneY) = 
+if (teamNum == 0) {
 	DribbleTo(teamNum, zoneX, zoneY, zoneX+1, zoneY) [] 
+	DribbleTo(teamNum, zoneX, zoneY, zoneX, zoneY+1) [] 
+	DribbleTo(teamNum, zoneX, zoneY, zoneX, zoneY-1)
+} else {
 	DribbleTo(teamNum, zoneX, zoneY, zoneX-1, zoneY) []
 	DribbleTo(teamNum, zoneX, zoneY, zoneX, zoneY+1) [] 
-	DribbleTo(teamNum, zoneX, zoneY, zoneX, zoneY-1);
+	DribbleTo(teamNum, zoneX, zoneY, zoneX, zoneY-1)
+}; 
 DribbleTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canDribbleToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] pcase {
 	call(dribbleSuccessRate)                                                                        : DribbleSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
 	call(dribbleFailRate,   teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribbleFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) 
@@ -282,8 +289,14 @@ DribbleFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) = dribbleFail.teamNum.zoneX
 
 
 // ========== Pass ========== //
-// Can pass to any other zone with teammate
-Pass(teamNum, zoneX, zoneY) = [] toZoneX:{0..N_X-1};toZoneY:{0..N_Y-1} @ PassTo(teamNum, zoneX, zoneY, toZoneX, toZoneY);
+// Can pass forward to any other zone with teammate
+Pass(teamNum, zoneX, zoneY) =
+if (teamNum == 0) {
+	[] toZoneX:{zoneX..N_X-1};toZoneY:{0..N_Y-1} @ PassTo(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+} else {
+	[] toZoneX:{0..zoneX};toZoneY:{0..N_Y-1} @ PassTo(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+};
+
 PassTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canPassToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] pcase {
 	call(passSuccessRate)                                                                        : PassSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
 	call(passFailRate,   teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): PassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) 
@@ -309,10 +322,15 @@ PassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) = passFail.teamNum.zoneX.zoneY
 // =========== Run ============ //
 // Can run forward or backward
 Run(teamNum, zoneX, zoneY) = 
+if (teamNum == 0) {
 	RunTo(teamNum, zoneX, zoneY, zoneX+1, zoneY) [] 
+	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY+1) [] 
+	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY-1)
+} else {
 	RunTo(teamNum, zoneX, zoneY, zoneX-1, zoneY) []
-	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY+1) []
-	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY-1);
+	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY+1) [] 
+	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY-1)
+}; 
 RunTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canRunToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] runSuccess.teamNum.zoneX.zoneY {
 	if (teamNum == 0) {
 		numOfTeam0PlayersInZone[zoneX][zoneY]--;
