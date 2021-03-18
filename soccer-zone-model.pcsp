@@ -130,7 +130,7 @@ hvar team1StartFormation[N_X][N_Y] = [
 	1, 0, 1,
 	0, 1, 0
 ];
-var time = 5;
+var time = 6;
 var teamInPossessionOfBall:{0..1} = 0;
 var ballPosX:{0..N_X-1} = 0;
 var ballPosY:{0..N_Y-1} = 0;
@@ -194,24 +194,24 @@ ResetPlayerPositions = reset{
 } -> Skip;
 
 // Kickoff
-KickOff(teamNum) = kickOff.0{teamInPossessionOfBall = teamNum; ballPosX = 2; ballPosY = 1;} -> Skip;
+KickOff(teamNum) = kickOff.teamNum{teamInPossessionOfBall = teamNum; ballPosX = 2; ballPosY = 1;} -> Skip;
 
 // Decrement time and let a single zone perform an action
-TickTock = tau{time--} -> ([!timeOver]([]x:{0..N_X-1};y:{0..N_Y-1} @ Zone(x, y))) [] [timeOver] Skip;
+TickTock = tau{time--} -> ([!timeOver]([]x:{0..N_X-1};y:{0..N_Y-1} @ Zone(x, y)) [] [timeOver] Skip);
 
 
 
 // ========== Zone ========== //
 Zone(zoneX, zoneY) = 
-[call(canZoneAct, numOfTeam0PlayersInZone[zoneX][zoneY] + numOfTeam1PlayersInZone[zoneX][zoneY])] ([] teamNum:{0..1} @ Actions(teamNum, zoneX, zoneY)); TickTock; // Perform an action for a zone that can act
+([call(canZoneAct, numOfTeam0PlayersInZone[zoneX][zoneY] + numOfTeam1PlayersInZone[zoneX][zoneY])] ([] teamNum:{0..1} @ Actions(teamNum, zoneX, zoneY)) [] [!call(canZoneAct, numOfTeam0PlayersInZone[zoneX][zoneY] + numOfTeam1PlayersInZone[zoneX][zoneY])] Skip); TickTock; // Perform an action for a zone that can act
 
 Actions(teamNum, zoneX, zoneY) = 
 [call(canTeamZoneAct, teamNum, zoneX, zoneY, teamInPossessionOfBall, ballPosX, ballPosY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)] pcase {
-	call(shootActionRate,   teamNum, zoneX, zoneY, teamInPossessionOfBall, ballPosX, ballPosY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone) : Shoot(teamNum, zoneX, zoneY)
+	call(shootActionRate,   teamNum, zoneX, zoneY, teamInPossessionOfBall, ballPosX, ballPosY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone) : [call(disallowShootingBeforeHalfLine, teamInPossessionOfBall, ballPosX, ballPosY)] Shoot(teamNum, zoneX, zoneY) [] [!call(disallowShootingBeforeHalfLine, teamInPossessionOfBall, ballPosX, ballPosY)] Skip
 	call(dribbleActionRate, teamNum, zoneX, zoneY, teamInPossessionOfBall, ballPosX, ballPosY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone) : Dribble(teamNum, zoneX, zoneY)
 	call(passActionRate,    teamNum, zoneX, zoneY, teamInPossessionOfBall, ballPosX, ballPosY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone) : Pass(teamNum, zoneX, zoneY)
 	call(runActionRate,     teamNum, zoneX, zoneY, teamInPossessionOfBall, ballPosX, ballPosY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone) : Run(teamNum, zoneX, zoneY)
-};
+} [] [!call(canTeamZoneAct, teamNum, zoneX, zoneY, teamInPossessionOfBall, ballPosX, ballPosY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone)] Skip;
 
 
 
@@ -260,7 +260,7 @@ if (teamNum == 0) {
 DribbleTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canDribbleToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] pcase {
 	call(dribbleSuccessRate)                                                                        : DribbleSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
 	call(dribbleFailRate,   teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribbleFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) 
-};
+} [] [!call(canDribbleToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] Skip;
 
 // Success:	advance ball to toZone, advance one player to toZone
 DribbleSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY) = dribbleSuccess.teamNum.zoneX.zoneY.toZoneX.toZoneY{
@@ -298,7 +298,7 @@ if (teamNum == 0) {
 PassTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canPassToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] pcase {
 	call(passSuccessRate)                                                                        : PassSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
 	call(passFailRate,   teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): PassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) 
-};
+} [] [!call(canPassToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] Skip;
 
 // Success: ball position change
 PassSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY) = passSuccess.teamNum.zoneX.zoneY.toZoneX.toZoneY{
@@ -308,6 +308,9 @@ PassSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY) = passSuccess.teamNum.zoneX
 
 // Fail: switch possession
 PassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) = passFail.teamNum.zoneX.zoneY.toZoneX.toZoneY{
+	var newBallPos = call(findNearestPlayerToTakeBall, teamInPossessionOfBall, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone);
+ 	ballPosX = newBallPos[0];
+ 	ballPosY = newBallPos[1];
 	if(teamNum == 0) {
 		teamInPossessionOfBall = 1;
 	} else {
@@ -322,14 +325,14 @@ PassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) = passFail.teamNum.zoneX.zoneY
 Run(teamNum, zoneX, zoneY) = 
 if (teamNum == 0) {
 	RunTo(teamNum, zoneX, zoneY, zoneX+1, zoneY) [] 
-	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY+1) [] 
-	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY-1)
+	RunTo(teamNum, zoneX, zoneY, zoneX+1, zoneY+1) [] 
+	RunTo(teamNum, zoneX, zoneY, zoneX+1, zoneY-1)
 } else {
 	RunTo(teamNum, zoneX, zoneY, zoneX-1, zoneY) []
-	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY+1) [] 
-	RunTo(teamNum, zoneX, zoneY, zoneX, zoneY-1)
+	RunTo(teamNum, zoneX, zoneY, zoneX-1, zoneY+1) [] 
+	RunTo(teamNum, zoneX, zoneY, zoneX-1, zoneY-1)
 }; 
-RunTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canRunToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] runSuccess.teamNum.zoneX.zoneY {
+RunTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canRunToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] runSuccess.teamNum.zoneX.zoneY.toZoneX.toZoneY {
 	if (teamNum == 0) {
 		numOfTeam0PlayersInZone[zoneX][zoneY]--;
 		numOfTeam0PlayersInZone[toZoneX][toZoneY]++;
@@ -337,7 +340,7 @@ RunTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canRunToZone, teamNum, zo
 		numOfTeam1PlayersInZone[zoneX][zoneY]--;
 		numOfTeam1PlayersInZone[toZoneX][toZoneY]++;
 	}
-} -> Skip;
+} -> Skip [] [!call(canRunToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] Skip;
 
 // ========== Verifications ========== //
 #define team0Win timeOver && score[0] > score[1] ;

@@ -403,6 +403,59 @@ namespace PAT.Lib
             return true;
         }
 
+        public static bool
+        disallowShootingBeforeHalfLine(
+            int teamInPossesionOfBall,
+            int ballPosX,
+            int ballPosY
+        )
+        {
+            int mid = NUM_ZONES_X / 2;
+            if (teamInPossesionOfBall == 0) {
+                return ballPosX >= mid;
+            } else {
+                return ballPosX <= mid;
+            }
+        }
+
+        public static int[]
+        findNearestPlayerToTakeBall(
+            int teamInPossessionOfBallBeforeFail,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone
+        )
+        {
+            // Just do a linear search because cannot be bothered with more complex algorithms
+            if (teamInPossessionOfBallBeforeFail == 0) 
+            {
+                for (int i = NUM_ZONES_X - 1; i >= 0; i--) 
+                {
+                    for (int j = 0; j < NUM_ZONES_Y; j++)
+                    {
+                        if (numOfTeam1PlayersInZone[i * NUM_ZONES_Y + j] > 0)
+                        {
+                            int[] result = {i, j};
+                            return result;
+                        }
+                    }
+                }
+            } else {
+                for (int i = 0; i < NUM_ZONES_X; i++) 
+                {
+                    for (int j = 0; j < NUM_ZONES_Y; j++)
+                    {
+                        if (numOfTeam0PlayersInZone[i * NUM_ZONES_Y + j] > 0)
+                        {
+                            int[] result = {i, j};
+                            return result;
+                        }
+                    }
+                }
+            }
+            int[] areYouSerious = {69, 69};
+            return areYouSerious;
+        }
+
         public static int
         shootActionRate(
             int team,
