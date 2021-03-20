@@ -45,7 +45,7 @@
  * ballPosX                - Represents the X-axis position of the ball on the playing field. 
  *                           Can take values from 0 to 4.
  *                           Initial value is not important as it will be set by the KickOff process.
- * ballPosX                - Represents the Y-axis position of the ball on the playing field. 
+ * ballPosY                - Represents the Y-axis position of the ball on the playing field. 
  *                           Can take values from 0 to 2.
  *                           Initial value is not important as it will be set by the KickOff process.
  * numOfTeam0PlayersInZone - Represents the number of Team0 players on the playing field. 
@@ -130,7 +130,7 @@ hvar team1StartFormation[N_X][N_Y] = [
 	1, 1, 1,
 	1, 1, 1
 ];
-var time = 5;
+var time = 2;
 var teamInPossessionOfBall:{0..1} = 0;
 var ballPosX:{0..N_X-1} = 0;
 var ballPosY:{0..N_Y-1} = 0;
@@ -221,8 +221,8 @@ Actions(teamNum, zoneX, zoneY) =
 
 // ========== Shoots =========== //
 Shoot(teamNum, zoneX, zoneY) = pcase {
-	call(shootSuccessRate): ShootSuccess(teamNum, zoneX, zoneY)
-	call(shootFailRate)   : ShootFail(teamNum, zoneX, zoneY) 
+	call(shootSuccessRate, zoneX, zoneY, teamNum): ShootSuccess(teamNum, zoneX, zoneY)
+	call(shootFailRate, zoneX, zoneY, teamNum): ShootFail(teamNum, zoneX, zoneY) 
 };
 
 // Success:	Increment score, switch possession, reset player pos
