@@ -32,10 +32,12 @@ namespace PAT.Lib
         }
 
         /// Checks if a zone can act.
-        /// A zone can act if there are players in the zone.
-        public static bool canZoneAct(int numOfPlayersInZone)
+        /// A zone can act if there are players in the zone and if the zone is currently only 1 cell away from the current ball position
+        public static bool canZoneAct(int numOfPlayersInZone, int zoneX, int zoneY, int ballPosX, int ballPosY)
         {
-            return numOfPlayersInZone > 0;
+            return numOfPlayersInZone > 0 && 
+            	Math.Abs(zoneX - ballPosX) < 2 &&
+            	Math.Abs(zoneY - ballPosY) < 2;
         }
 
         /// Checks if a particular team on the zone can act.
