@@ -130,7 +130,7 @@ hvar team1StartFormation[N_X][N_Y] = [
 	1, 1, 1,
 	1, 1, 1
 ];
-var time = 2;
+var time = 6;
 var teamInPossessionOfBall:{0..1} = 0;
 var ballPosX:{0..N_X-1} = 0;
 var ballPosY:{0..N_Y-1} = 0;

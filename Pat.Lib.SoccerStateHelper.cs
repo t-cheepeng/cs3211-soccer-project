@@ -24,6 +24,12 @@ namespace PAT.Lib
         public const int NUM_ZONES_X = 5;
         public const int NUM_ZONES_Y = 3;
 
+        // Below numbers are calculated from statsbomb free soccer data
+        // See compile_data.py for more details
+        public const double SHOOT_ACTION_PERCENTAGE = 0.009617925746881376 * 10000;
+        public const double DRIBBLE_RUN_ACTION_PERCENTAGE = 0.3080043896394667 * 10000;
+        public const double PASS_ACTION_PERCENTAGE = 0.3743732949741852 * 10000;
+
 		// ========== Variables for shoot success rate computation/caching ==========
 		
 		// 7 vs. 7 Player Field: 55m * 36.5m 
@@ -564,7 +570,7 @@ namespace PAT.Lib
             {
                 return 0;
             }
-            return 1;
+            return (int) SHOOT_ACTION_PERCENTAGE;
         }
 
         public static int
@@ -592,7 +598,7 @@ namespace PAT.Lib
             {
                 return 0;
             }
-            return 1;
+            return (int) DRIBBLE_RUN_ACTION_PERCENTAGE;
         }
 
         public static int
@@ -620,7 +626,7 @@ namespace PAT.Lib
             {
                 return 0;
             }
-            return 1;
+            return (int) PASS_ACTION_PERCENTAGE;
         }
 
         public static int
@@ -648,7 +654,7 @@ namespace PAT.Lib
             {
                 return 0;
             }
-            return 1;
+            return (int) DRIBBLE_RUN_ACTION_PERCENTAGE;
         }
 
         public static int shootSuccessRate(int zoneX, int zoneY, int teamInPosession)
