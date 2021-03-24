@@ -126,9 +126,9 @@ hvar team0StartFormation[N_X][N_Y] = [
 hvar team1StartFormation[N_X][N_Y] = [
 	0, 0, 0,
 	0, 0, 0,
-	0, 1, 0,
 	1, 1, 1,
-	1, 1, 1
+	1, 1, 1,
+	0, 1, 0
 ];
 var time = 6;
 var teamInPossessionOfBall:{0..1} = 0;
