@@ -239,8 +239,14 @@ namespace PAT.Lib
             {
                 return false;
             }
-
-            return true;
+            
+            float mid = NUM_ZONES_X / 2;
+            if (teamInPossession == 0)
+            {
+                return zoneX > mid;
+            } else {
+                return zoneX < mid;
+            }
         }
 
         public static bool
@@ -353,24 +359,45 @@ namespace PAT.Lib
                 return false;
             }
 
-            // Check if there is any teammate in any other zone
-            for (int i = 0; i < NUM_ZONES_X; i++)
+            // Check if there is any teammate in front/at the side
+            if (team == 0) 
             {
-                for (int j = 0; j < NUM_ZONES_Y; j++)
-                if (
-                    canPassToZone(team,
-                    zoneX,
-                    zoneY,
-                    numOfTeam0PlayersInZone,
-                    numOfTeam1PlayersInZone,
-                    i,
-                    j)
-                )
+                for (int i = zoneX; i < NUM_ZONES_X; i++)
                 {
-                    return true;
+                    for (int j = 0; j < NUM_ZONES_Y; j++)
+                    if (
+                        canPassToZone(team,
+                        zoneX,
+                        zoneY,
+                        numOfTeam0PlayersInZone,
+                        numOfTeam1PlayersInZone,
+                        i,
+                        j)
+                    )
+                    {
+                        return true;
+                    }
+                }
+            } else 
+            {
+                for (int i = 0; i <= zoneX; i++)
+                {
+                    for (int j = 0; j < NUM_ZONES_Y; j++)
+                    if (
+                        canPassToZone(team,
+                        zoneX,
+                        zoneY,
+                        numOfTeam0PlayersInZone,
+                        numOfTeam1PlayersInZone,
+                        i,
+                        j)
+                    )
+                    {
+                        return true;
+                    }
                 }
             }
-
+            
             return false;
         }
 
@@ -490,21 +517,6 @@ namespace PAT.Lib
             }
 
             return true;
-        }
-
-        public static bool
-        disallowShootingBeforeHalfLine(
-            int teamInPossesionOfBall,
-            int ballPosX,
-            int ballPosY
-        )
-        {
-            int mid = NUM_ZONES_X / 2;
-            if (teamInPossesionOfBall == 0) {
-                return ballPosX >= mid;
-            } else {
-                return ballPosX <= mid;
-            }
         }
 
         public static int[]
@@ -670,7 +682,7 @@ namespace PAT.Lib
 
         public static int dribbleSuccessRate()
         {
-            return 1;
+            return 9;
         }
 
         public static int
@@ -704,7 +716,7 @@ namespace PAT.Lib
 
         public static int passSuccessRate()
         {
-            return 1;
+            return 9;
         }
 
         public static int
