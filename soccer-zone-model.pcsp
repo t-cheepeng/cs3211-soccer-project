@@ -341,7 +341,7 @@ if (teamNum == 0) {
 	}
 }; 
 DribbleTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canDribbleToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] pcase {
-	call(dribbleSuccessRate)                                                                        : DribbleSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+	call(dribbleSuccessRate,teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribbleSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
 	call(dribbleFailRate,   teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribblePassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) 
 };
 
@@ -369,8 +369,8 @@ if (teamNum == 0) {
 };
 
 PassTo(teamNum, zoneX, zoneY, toZoneX, toZoneY) = [call(canPassToZone, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)] pcase {
-	call(passSuccessRate)                                                                      : PassSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
-	call(passFailRate, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone): DribblePassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) 
+	call(passSuccessRate, teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY): PassSuccess(teamNum, zoneX, zoneY, toZoneX, toZoneY)
+	call(passFailRate   , teamNum, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY): DribblePassFail(teamNum, zoneX, zoneY, toZoneX, toZoneY) 
 };
 
 // Success: ball position change

@@ -110,6 +110,57 @@ namespace PAT.Lib
 			return cacheVal;
 		}
 
+		// ========== Variables for DRIBBLE success rate computation/caching ==========
+		
+		// 7 vs. 7 Player Field: 55m * 36.5m 	
+        public const double INTERCEPT_SUCCESS_RATE = 0.266990291;
+        public const double DRIBBLE_SUCCESS_RATE = 1 - INTERCEPT_SUCCESS_RATE;
+        public const double DRIBBLE_FAILURE_RATE = INTERCEPT_SUCCESS_RATE;
+
+		// ========== Variables for PASS success rate computation/caching ==========
+		
+		// 7 vs. 7 Player Field: 55m * 36.5m
+        // Probability obtained from StatsBomb. Explanation is provided in report.
+        public const double SHORT_PASS_SUCCESS_RATE = 0.75;
+        public const double LONG_PASS_SUCCESS_RATE = 0.428571429;
+        public const double CROSS_PASS_SUCCESS_RATE = 0.342857143;
+
+		// ========== Methods for PASS success rate computation/caching ==========
+		public static double getExpectedPass(
+            int team,
+            int zoneX,
+            int zoneY,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone,
+            int toZoneX,
+            int toZoneY) {
+            
+            bool isOpponentInTargetZone = (team==0 && numOfTeam1PlayersInZone[toZoneX * NUM_ZONES_Y + toZoneY] > 0) ||
+                                          (team==1 && numOfTeam0PlayersInZone[toZoneX * NUM_ZONES_Y + toZoneY] > 0);
+            double passTypeRate = getPassTypeRate(team, zoneX, zoneY, toZoneX, toZoneY);
+            if (isOpponentInTargetZone) {
+                return passTypeRate * (1-INTERCEPT_SUCCESS_RATE);
+            } else {
+                return passTypeRate;
+            }
+		}
+
+		public static double getPassTypeRate(int team, int zoneX, int zoneY, int toZoneX, int toZoneY) {
+			// Cross Pass from flank to in front of goal (4,1) or (0,1)
+            if ((team==0 && zoneX==4 && toZoneX==4 && toZoneY==1) ||
+                (team==1 && zoneX==0 && toZoneX==0 && toZoneY==1)) {
+                return CROSS_PASS_SUCCESS_RATE;
+            // Short Pass to any adjacent cell (side or diagonally in front)
+            } else if (Math.Abs(zoneX-toZoneX) <= 1 && 
+                       Math.Abs(zoneY - toZoneY) <= 1) {
+                return SHORT_PASS_SUCCESS_RATE;
+            // Long Pass
+            } else {
+                return LONG_PASS_SUCCESS_RATE;
+            }
+		}
+        
+
 		// ========== Methods for Zone related computation ==========
 
         // Check if a given team is in possession of the ball
@@ -680,9 +731,16 @@ namespace PAT.Lib
         }
 
 
-        public static int dribbleSuccessRate()
+        public static int 
+        dribbleSuccessRate(
+            int team,
+            int zoneX,
+            int zoneY,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone
+        )
         {
-            return 9;
+            return 10000-dribbleFailRate(team,zoneX,zoneY,numOfTeam0PlayersInZone,numOfTeam1PlayersInZone);
         }
 
         public static int
@@ -701,7 +759,7 @@ namespace PAT.Lib
                 {
                     return 0;
                 }
-                return 1; // Calculations here
+                return (int) (DRIBBLE_FAILURE_RATE * 10000);
             }
             else
             {
@@ -710,13 +768,22 @@ namespace PAT.Lib
                 {
                     return 0;
                 }
-                return 1; // Calculations here
+                return (int) (DRIBBLE_FAILURE_RATE * 10000);
             }
         }
 
-        public static int passSuccessRate()
+        public static int 
+        passSuccessRate(
+            int team,
+            int zoneX,
+            int zoneY,
+            int[] numOfTeam0PlayersInZone,
+            int[] numOfTeam1PlayersInZone,
+            int toZoneX,
+            int toZoneY
+        )
         {
-            return 9;
+            return (int) (getExpectedPass(team, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY) * 10000);
         }
 
         public static int
@@ -725,29 +792,12 @@ namespace PAT.Lib
             int zoneX,
             int zoneY,
             int[] numOfTeam0PlayersInZone,
-            int[] numOfTeam1PlayersInZone
+            int[] numOfTeam1PlayersInZone,
+            int toZoneX,
+            int toZoneY
         )
         {
-            if (team == 0)
-            {
-                // No opponent means no chance of failure
-                if (numOfTeam1PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] == 0)
-                {
-                    return 0;
-                }
-                return 1; // Calculations here
-            }
-            else
-            {
-                // No opponent means no chance of failure
-                if (numOfTeam0PlayersInZone[zoneX * NUM_ZONES_Y + zoneY] == 0)
-                {
-                    return 0;
-                }
-                return 1; // Calculations here
-            }
+            return (int) ((1-getExpectedPass(team, zoneX, zoneY, numOfTeam0PlayersInZone, numOfTeam1PlayersInZone, toZoneX, toZoneY)) * 10000);
         }
-        
-
     }
 }
