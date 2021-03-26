@@ -111,26 +111,107 @@
  */
 
 #import "PAT.Lib.SoccerStateHelper";
+#import "PAT.Lib.HashTable";
 
 #define timeOver time == 0;
 #define N_X 5; // Forward-backward axis
 #define N_Y 3; // Sideway axis
 
-hvar team0StartFormation[N_X][N_Y] = [
+// Control variables for experiments
+var time = 5;
+// Strategy from https://themastermindsite.com/2018/10/15/best-formations-for-7v7/#:~:text=2-3-1,back%20without%20overloading%20defensive%20areas
+// 0 -> 2-3-1
+// 1 -> 2-1-2-1
+// 2 -> 3-1-2
+// 3 -> 3-1-1-1
+// 4 -> 3-2-1
+// Formations with more than 3 are just squashed so that 1st and 2nd number belong in same row(row with goalkeeper) as we only have 5 rows
+// Formations can go past halfway line. Don't think that is an issue since even if we start with all players before halfway line, we are going to eventually
+// make them spread out to past the halfway line. Save on some state space
+hvar team0Strategy = 0;
+hvar team1Strategy = 0;
+
+// ========== Formation 0: 2-3-1 ========== //
+hvar team0StartFormation0[N_X][N_Y] = [
 	0, 1, 0,
+	1, 0, 1,
 	1, 1, 1,
-	1, 1, 1,
-	0, 0, 0,
+	0, 1, 0,
 	0, 0, 0
 ];
-hvar team1StartFormation[N_X][N_Y] = [
+hvar team1StartFormation0[N_X][N_Y] = [
 	0, 0, 0,
-	0, 0, 0,
+	0, 1, 0,
 	1, 1, 1,
+	1, 0, 1,
+	0, 1, 0
+];
+
+// ========== Formation 1: 2-1-2-1 ========== //
+hvar team0StartFormation1[N_X][N_Y] = [
+	1, 1, 1,
+	0, 1, 0,
+	1, 0, 1,
+	0, 1, 0,
+	0, 0, 0
+];
+hvar team1StartFormation1[N_X][N_Y] = [
+	0, 0, 0,
+	0, 1, 0,
+	1, 0, 1,
+	0, 1, 0,
+	1, 1, 1
+];
+
+// ========== Formation 2: 3-1-2 ========== //
+hvar team0StartFormation2[N_X][N_Y] = [
+	0, 1, 0,
+	1, 1, 1,
+	0, 1, 0,
+	1, 0, 1,
+	0, 0, 0
+];
+hvar team1StartFormation2[N_X][N_Y] = [
+	0, 0, 0,
+	1, 0, 1,
+	0, 1, 0,
 	1, 1, 1,
 	0, 1, 0
 ];
-var time = 5;
+
+// ========== Formation 3: 3-1-1-1 ========== //
+hvar team0StartFormation3[N_X][N_Y] = [
+	1, 2, 1,
+	0, 1, 0,
+	0, 1, 0,
+	0, 1, 0,
+	0, 0, 0
+];
+hvar team1StartFormation3[N_X][N_Y] = [
+	0, 0, 0,
+	0, 1, 0,
+	0, 1, 0,
+	0, 1, 0,
+	1, 2, 1
+];
+
+// ========== Formation 4: 3-2-1 ========== //
+hvar team0StartFormation4[N_X][N_Y] = [
+	0, 1, 0,
+	1, 1, 1,
+	1, 0, 1,
+	0, 1, 0,
+	0, 0, 0
+];
+hvar team1StartFormation4[N_X][N_Y] = [
+	0, 0, 0,
+	0, 1, 0,
+	1, 0, 1,
+	1, 1, 1,
+	0, 1, 0
+];
+
+// ========== State Variables ========== //
 var teamInPossessionOfBall:{0..1} = 0;
 var ballPosX:{0..N_X-1} = 0;
 var ballPosY:{0..N_Y-1} = 0;
@@ -160,37 +241,29 @@ PlayGame = ResetPlayerPositions; pcase{1: KickOff(0) 1: KickOff(1)}; TickTock;
 // ========== Utils Process ========== //
 // Reset player positions
 ResetPlayerPositions = reset{
-	numOfTeam0PlayersInZone[0][0] = team0StartFormation[0][0];
-	numOfTeam0PlayersInZone[0][1] = team0StartFormation[0][1];
-	numOfTeam0PlayersInZone[0][2] = team0StartFormation[0][2];
-	numOfTeam0PlayersInZone[1][0] = team0StartFormation[1][0];
-	numOfTeam0PlayersInZone[1][1] = team0StartFormation[1][1];
-	numOfTeam0PlayersInZone[1][2] = team0StartFormation[1][2];
-	numOfTeam0PlayersInZone[2][0] = team0StartFormation[2][0];
-	numOfTeam0PlayersInZone[2][1] = team0StartFormation[2][1];
-	numOfTeam0PlayersInZone[2][2] = team0StartFormation[2][2];
-	numOfTeam0PlayersInZone[3][0] = team0StartFormation[3][0];
-	numOfTeam0PlayersInZone[3][1] = team0StartFormation[3][1];
-	numOfTeam0PlayersInZone[3][2] = team0StartFormation[3][2];
-	numOfTeam0PlayersInZone[4][0] = team0StartFormation[4][0];
-	numOfTeam0PlayersInZone[4][1] = team0StartFormation[4][1];
-	numOfTeam0PlayersInZone[4][2] = team0StartFormation[4][2];
-
-	numOfTeam1PlayersInZone[0][0] = team1StartFormation[0][0];
-	numOfTeam1PlayersInZone[0][1] = team1StartFormation[0][1];
-	numOfTeam1PlayersInZone[0][2] = team1StartFormation[0][2];
-	numOfTeam1PlayersInZone[1][0] = team1StartFormation[1][0];
-	numOfTeam1PlayersInZone[1][1] = team1StartFormation[1][1];
-	numOfTeam1PlayersInZone[1][2] = team1StartFormation[1][2];
-	numOfTeam1PlayersInZone[2][0] = team1StartFormation[2][0];
-	numOfTeam1PlayersInZone[2][1] = team1StartFormation[2][1];
-	numOfTeam1PlayersInZone[2][2] = team1StartFormation[2][2];
-	numOfTeam1PlayersInZone[3][0] = team1StartFormation[3][0];
-	numOfTeam1PlayersInZone[3][1] = team1StartFormation[3][1];
-	numOfTeam1PlayersInZone[3][2] = team1StartFormation[3][2];
-	numOfTeam1PlayersInZone[4][0] = team1StartFormation[4][0];
-	numOfTeam1PlayersInZone[4][1] = team1StartFormation[4][1];
-	numOfTeam1PlayersInZone[4][2] = team1StartFormation[4][2];
+	if (team0Strategy == 0) {
+		numOfTeam0PlayersInZone = team0StartFormation0;
+	} else if (team0Strategy == 1) {
+		numOfTeam0PlayersInZone = team0StartFormation1;
+	} else if (team0Strategy == 2) {
+		numOfTeam0PlayersInZone = team0StartFormation2;
+	} else if (team0Strategy == 3) {
+		numOfTeam0PlayersInZone = team0StartFormation3;
+	} else {
+		numOfTeam0PlayersInZone = team0StartFormation4;
+	}
+	
+	if (team1Strategy == 0) {
+		numOfTeam1PlayersInZone = team1StartFormation0;
+	} else if (team1Strategy == 1) {
+		numOfTeam1PlayersInZone = team1StartFormation1;
+	} else if (team1Strategy == 2) {
+		numOfTeam1PlayersInZone = team1StartFormation2;
+	} else if (team1Strategy == 3) {
+		numOfTeam1PlayersInZone = team1StartFormation3;
+	} else {
+		numOfTeam1PlayersInZone = team1StartFormation4;
+	}
 } -> Skip;
 
 // Kickoff
