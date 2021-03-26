@@ -16,12 +16,10 @@ num_pass_failure_FAKE = 0
 # Just performs a simple counting of number of Shoot, Dribble(called Carry in the data) and Pass
 # Dribble doesn't exist as an event but we just assume that it is the same as Dribble
 # Outputs the proportion(percentage) of the events to console
-LIMIT = 10
 count = 0
 has_outcome = 0
 files = [f for f in os.listdir('.') if os.path.isfile(f)]
 print("Total files: ", len(files))
-print("Scan files: ", LIMIT)
 for f in files:
     count += 1
     try:
@@ -51,8 +49,7 @@ for f in files:
 
     except JSONDecodeError:
         print("Too lazy to exclude the python file. So just catch it here", f)
-    if count >= LIMIT:
-        break
+    print("Files completed: ", count)
         
 allEvent = num_shot + 2 * num_dribble + num_pass
 shot_prob = num_shot / allEvent
@@ -62,10 +59,4 @@ pass_prob = num_pass / allEvent
 print("Shoot Prob: ", shot_prob)
 print("Dribble/Run Prob: ", dribble_prob)
 print("Passing Prob: ", pass_prob)
-
-print("Passing with outcome: ", has_outcome)
-print("Passing no outcome: ", num_pass-has_outcome)
-
-print("Intercepted (total): ", num_pass_failure)
-print("Intercepted (success): ", num_pass_failure_REAL)
-print("Intercepted (failed): ", num_pass_failure_FAKE)
+print("Intercept success prob: ", num_pass_failure_REAL / num_pass_failure)

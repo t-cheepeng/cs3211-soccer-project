@@ -113,7 +113,7 @@ namespace PAT.Lib
 		// ========== Variables for DRIBBLE success rate computation/caching ==========
 		
 		// 7 vs. 7 Player Field: 55m * 36.5m 	
-        public const double INTERCEPT_SUCCESS_RATE = 0.266990291;
+        public const double INTERCEPT_SUCCESS_RATE = 0.2533349003937239;
         public const double DRIBBLE_SUCCESS_RATE = 1 - INTERCEPT_SUCCESS_RATE;
         public const double DRIBBLE_FAILURE_RATE = INTERCEPT_SUCCESS_RATE;
 
