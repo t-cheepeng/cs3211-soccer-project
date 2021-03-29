@@ -93,19 +93,21 @@
 #define N_Y 3; // Sideway axis
 
 // Control variables for experiments
-var time = 5;
-// Strategy from https://themastermindsite.com/2018/10/15/best-formations-for-7v7/#:~:text=2-3-1,back%20without%20overloading%20defensive%20areas
-// 0 -> 2-3-1
-// 1 -> 2-1-2-1
-// 2 -> 3-1-2
-// 3 -> 3-1-1-1
-// 4 -> 3-2-1
-// Formations with more than 3 are just squashed so that 1st and 2nd number belong in same row(row with goalkeeper) as we only have 5 rows
-// Formations can go past halfway line. Don't think that is an issue since even if we start with all players before halfway line, we are going to eventually
-// make them spread out to past the halfway line. Save on some state space
-hvar team0Strategy = 0;
-hvar team1Strategy = 0;
+hvar time = 7;
+hvar team0Strategy:{0..4} = 0;
+hvar team1Strategy:{0..4} = 0;
 
+/* 
+ * Formation strategies from https://themastermindsite.com/2018/10/15/best-formations-for-7v7/#:~:text=2-3-1,back%20without%20overloading%20defensive%20areas
+ * 0 -> 2-3-1
+ * 1 -> 2-1-2-1
+ * 2 -> 3-1-2
+ * 3 -> 3-1-1-1
+ * 4 -> 3-2-1
+ * Formations with more than 3 are just squashed so that 1st and 2nd number belong in same row(row with goalkeeper) as we only have 5 rows
+ * Formations can go past halfway line. Don't think that is an issue since even if we start with all players before halfway line, we are going to eventually
+ * make them spread out to past the halfway line. Save on some state space
+ */
 // ========== Formation 0: 2-3-1 ========== //
 hvar team0StartFormation0[N_X][N_Y] = [
 	0, 1, 0,
