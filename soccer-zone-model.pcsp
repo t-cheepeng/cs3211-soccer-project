@@ -86,7 +86,6 @@
  */
 
 #import "PAT.Lib.SoccerStateHelper";
-#import "PAT.Lib.HashTable";
 
 #define timeOver time == 0;
 #define N_X 5; // Forward-backward axis
@@ -272,7 +271,7 @@ Actions(teamNum, zoneX, zoneY) =
 // ========== Shoots =========== //
 Shoot(teamNum, zoneX, zoneY) = pcase {
 	call(shootSuccessRate, zoneX, zoneY, teamNum): ShootSuccess(teamNum, zoneX, zoneY)
-	call(shootFailRate, zoneX, zoneY, teamNum): ShootFail(teamNum, zoneX, zoneY) 
+	call(shootFailRate   , zoneX, zoneY, teamNum): ShootFail(teamNum, zoneX, zoneY) 
 };
 
 // Success:	Increment score, switch possession, reset player pos
