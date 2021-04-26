@@ -5,7 +5,7 @@ This repo contains the CSP# model and the relevant files for NUS's CS3211 projec
 - `soccer-zone-model.pcsp` contains the model in CSP#.
 - `Pat.Lib.SoccerStateHelper.cs` and `geometryUtils.cs` are the helper C# libraries used in the CSP# model. `geometryUtils.cs` is used directly in `Pat.Lib.SoccerStateHelper.cs`.
 - `Pat.Lib.SoccerStateHelper.dll` is the built C# libary.
-- `scripts` is the folder containing scripted used in our project.
+- `scripts` is the folder containing scripts used in our project.
 
 ## Usage
 1. Download `PAT 3` from https://pat.comp.nus.edu.sg/.
